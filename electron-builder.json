@@ -1,0 +1,13 @@
+{
+    "appId": "com.m-guenzel.skribbl-bot",
+    "files": ["dist-electron", "dist-react"],
+    "mac": {
+        "target": "dmg"
+    },
+    "linux": {
+        "target": "AppImage"
+    },
+    "windows": {
+        "target": ["portable", "msi"]
+    }
+}
