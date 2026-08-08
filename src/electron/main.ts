@@ -1,8 +1,6 @@
-import { app, BaseWindow, WebContentsView } from "electron"
+import { app, BaseWindow, ipcMain, WebContentsView } from "electron"
 import path from "path"
 import { getPreloadPath } from "./utils.js";
-
-const SIDEBAR_WIDTH = 320;
 
 const loadWebContents = (mainWindow: BaseWindow) => {
     // Skribbl
@@ -19,18 +17,19 @@ const loadWebContents = (mainWindow: BaseWindow) => {
     mainWindow.contentView.addChildView(sidebar);
     sidebar.webContents.loadURL("http://localhost:5123");
 
+    let sidebarWidth = 40;
     const layout = () => {
         const { width, height } = mainWindow.getContentBounds();
         gameView.setBounds({ 
             x: 0,
             y: 0,
-            width: width - SIDEBAR_WIDTH,
+            width: width - sidebarWidth,
             height: height
         });
         sidebar.setBounds({
-            x: width - SIDEBAR_WIDTH,
+            x: width - sidebarWidth,
             y: 0,
-            width: SIDEBAR_WIDTH,
+            width: sidebarWidth,
             height: height
         })
     }
@@ -41,6 +40,12 @@ const loadWebContents = (mainWindow: BaseWindow) => {
     mainWindow.on("leave-full-screen", layout);
     mainWindow.on("maximize", layout);
     mainWindow.on("unmaximize", layout);
+    ipcMain.on("sidebarResize", (_, sidebarSize: number) => {
+        console.log("Triggered custom event")
+        console.log(sidebarSize)
+        sidebarWidth = sidebarSize;
+        layout();
+    });
 }
 
 app.on("ready", () => {
