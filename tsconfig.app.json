@@ -25,7 +25,7 @@
     /* shadcn */
     "paths": {
       "@/*": [
-        "./src/ui/*"
+        "./src/sidebar/*"
       ]
     }
   },
