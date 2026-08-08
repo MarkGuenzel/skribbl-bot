@@ -9,10 +9,7 @@ function App() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    window.electron.sendSidebarResize(
-      "sidebarResize",
-      open ? SIDEBAR_WIDTH : 40
-    )
+    window.electron.sendSidebarResize(open ? SIDEBAR_WIDTH : 40)
   }, [open])
 
   return (

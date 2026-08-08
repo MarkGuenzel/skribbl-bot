@@ -6,6 +6,6 @@ type UnsubscribeFunction = () => void;
 
 interface Window {
     electron: {
-        sendSidebarResize
+        sendSidebarResize: (size: EventPayloadMapping["sidebarResize"]) => void,
     }
 }

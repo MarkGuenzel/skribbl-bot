@@ -41,8 +41,6 @@ const loadWebContents = (mainWindow: BaseWindow) => {
     mainWindow.on("maximize", layout);
     mainWindow.on("unmaximize", layout);
     ipcMain.on("sidebarResize", (_, sidebarSize: number) => {
-        console.log("Triggered custom event")
-        console.log(sidebarSize)
         sidebarWidth = sidebarSize;
         layout();
     });
