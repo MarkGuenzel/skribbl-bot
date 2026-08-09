@@ -1,3 +1,5 @@
+type PreloadFile = "sidebar.cjs" | "skribbl.cjs"
+
 type EventPayloadMapping = {
     sidebarResize: number
 }

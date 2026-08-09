@@ -4,14 +4,19 @@ import { getPreloadPath } from "./utils.js";
 
 const loadWebContents = (mainWindow: BaseWindow) => {
     // Skribbl
-    const gameView = new WebContentsView();
+    const gameView = new WebContentsView({
+        webPreferences: {
+            preload: getPreloadPath("skribbl.cjs")
+        }
+    });
     mainWindow.contentView.addChildView(gameView);
     gameView.webContents.loadURL("https://skribbl.io");
+    gameView.webContents.openDevTools({ mode: "detach" })
     
     // Sidebar
     const sidebar = new WebContentsView({
         webPreferences: {
-            preload: getPreloadPath()
+            preload: getPreloadPath("sidebar.cjs")
         }
     })
     mainWindow.contentView.addChildView(sidebar);

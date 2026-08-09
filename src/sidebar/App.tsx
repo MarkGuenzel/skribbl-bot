@@ -3,7 +3,7 @@ import './App.css'
 import { Button } from './components/ui/button'
 import { PanelLeft } from 'lucide-react'
 
-const SIDEBAR_WIDTH = 320;
+const SIDEBAR_WIDTH = 500;
 
 function App() {
   const [open, setOpen] = useState(false);
