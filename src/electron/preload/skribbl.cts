@@ -7,14 +7,18 @@ const canvasObserver = new MutationObserver(() => {
 // Gues the word
 let chatInput: HTMLInputElement;
 let currentWordDiv: HTMLElement;
-const currentWordObserver = new MutationObserver(() => {
+const currentWordObserver = new MutationObserver(async () => {
     const hintDivs = currentWordDiv?.querySelectorAll<HTMLDivElement>(".hint");
 
     let currentWord = "";
     for (const letterDiv of hintDivs) {
         currentWord += letterDiv.innerText;
     }
+
+    const wordList = await window.electron.getWordList(currentWord.length)
+
     console.log(`Current Word: ${currentWord}`);
+    console.log(`Word List: ${wordList.slice(0, 10)}`);
 });
 
 const observerTargets = [

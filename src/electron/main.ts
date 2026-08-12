@@ -1,6 +1,13 @@
 import { app, BaseWindow, ipcMain, WebContentsView } from "electron"
 import path from "path"
-import { getPreloadPath } from "./utils.js";
+import { getPreloadPath, ipcMainHandle } from "./utils.js";
+import { parse } from "csv-parse/sync";
+import { readFileSync } from "fs";
+type CSVRow = {
+    word: string,
+    count: number
+}
+const csvPath = "src/electron/skribbl-words.csv"
 
 const loadWebContents = (mainWindow: BaseWindow) => {
     // Skribbl
@@ -59,4 +66,15 @@ app.on("ready", () => {
 
     loadWebContents(mainWindow);
 
+    ipcMainHandle("getWordList", (wordLength: number) => {
+        const records: CSVRow[] = parse(
+            readFileSync(csvPath, "utf-8"),
+            { columns: true, skip_empty_lines: true, cast: true }
+        );
+        const wordList = records
+            .filter(row => row.count === wordLength)
+            .map(row => row.word);
+
+        return wordList;
+    });
 })
