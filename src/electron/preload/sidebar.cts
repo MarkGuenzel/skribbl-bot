@@ -1,9 +1,6 @@
 import { contextBridge } from "electron";
 import { ipcRendererSend } from "./ipc.js";
-
-type SidebarElectronApi = {
-    sendSidebarResize: (size: number) => void
-}
+import { SidebarElectronApi } from "../../shared/electron-api.js"
 
 contextBridge.exposeInMainWorld("electron", {
     sendSidebarResize: (size) => {ipcRendererSend("sidebarResize", size)},

@@ -1,5 +1,7 @@
-interface Window {
-    electron: {
-        sendSidebarResize: (size: number) => void
+import { SidebarElectronApi } from "../shared/electron-api"
+
+declare global {
+    interface Window {
+        electron: SidebarElectronApi
     }
 }
