@@ -1,3 +1,5 @@
+import {ipcRendererInvoke} from "./ipc.js"
+
 // Draw the word
 let gameCanvas: HTMLCanvasElement;
 const canvasObserver = new MutationObserver(() => {
@@ -15,8 +17,7 @@ const currentWordObserver = new MutationObserver(async () => {
         currentWord += letterDiv.innerText;
     }
 
-    const wordList = await window.electron.getWordList(currentWord.length)
-
+    const wordList = await ipcRendererInvoke("getWordList", currentWord.length);
     console.log(`Current Word: ${currentWord}`);
     console.log(`Word List: ${wordList.slice(0, 10)}`);
 });

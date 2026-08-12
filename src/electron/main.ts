@@ -13,7 +13,8 @@ const loadWebContents = (mainWindow: BaseWindow) => {
     // Skribbl
     const gameView = new WebContentsView({
         webPreferences: {
-            preload: getPreloadPath("skribbl.cjs")
+            preload: getPreloadPath("skribbl.cjs"),
+            sandbox: false
         }
     });
     mainWindow.contentView.addChildView(gameView);
@@ -23,7 +24,8 @@ const loadWebContents = (mainWindow: BaseWindow) => {
     // Sidebar
     const sidebar = new WebContentsView({
         webPreferences: {
-            preload: getPreloadPath("sidebar.cjs")
+            preload: getPreloadPath("sidebar.cjs"),
+            sandbox: false
         }
     })
     mainWindow.contentView.addChildView(sidebar);

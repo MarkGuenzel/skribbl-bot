@@ -1,28 +1,11 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge } from "electron";
+import { ipcRendererSend } from "./ipc.js";
+
+type SidebarElectronApi = {
+    sendSidebarResize: (size: number) => void
+}
 
 contextBridge.exposeInMainWorld("electron", {
     sendSidebarResize: (size) => {ipcRendererSend("sidebarResize", size)},
-    getWordList: (wordLength: number) => {return ipcRendererInvoke("getWordList", wordLength)}
-} satisfies Window["electron"]);
+} satisfies SidebarElectronApi);
 
-function ipcRendererSend<Key extends keyof EventPayloadMapping>(
-    channel: Key,
-    payload: EventPayloadMapping[Key]
-) {
-    ipcRenderer.send(channel, payload);
-}
-
-function ipcRendererOn<Key extends keyof EventPayloadMapping>(
-    channel: Key,
-    callback: (payload: EventPayloadMapping[Key]) => void
-) {
-    const cb = (_: Electron.IpcRendererEvent, payload: any) => callback(payload);
-    ipcRenderer.on(channel, cb);
-    return () => ipcRenderer.off(channel, cb);
-}
-
-function ipcRendererInvoke<Key extends keyof EventPayloadMapping>(
-    key: Key
-): Promise<EventPayloadMapping[Key]> {
-    return ipcRenderer.invoke(key);
-}

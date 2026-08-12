@@ -14,16 +14,16 @@ export function getPreloadPath(fileName: PreloadFile) {
 }
 
 export function ipcMainHandle<Key extends keyof EventPayloadMapping>(
-    key: Key,
-    handler: () => EventPayloadMapping[Key]
+    channel: Key,
+    handler: (...args: EventPayloadMapping[Key]["args"]) => EventPayloadMapping[Key]["return"]
 ) {
-    ipcMain.handle(key, () => handler());
+    ipcMain.handle(channel, (_event, ...args: EventPayloadMapping[Key]["args"]) => handler(...args));
 }
 
 export function ipcWebContentsSend<Key extends keyof EventPayloadMapping>(
-    key: Key,
+    channel: Key,
     webContents: WebContents,
-    payload: EventPayloadMapping[Key]
+    ...args: EventPayloadMapping[Key]["args"]
 ) {
-    webContents.send(key, payload);
+    webContents.send(channel, ...args);
 }
