@@ -1,4 +1,3 @@
-import { clearInterval } from "timers";
 import {ipcRendererInvoke} from "./ipc.js"
 import { Mutex } from "async-mutex";
 
@@ -17,8 +16,6 @@ let wordGuesserId: NodeJS.Timeout;
 
 const guessWord = async () => {
     await wordListMutex.runExclusive(() => {
-        console.log(`List length: ${currentWordList.length}`)
-        console.log(`Word List: ${currentWordList.splice(0, 10)}`)
         const word = currentWordList.length === 1 ? currentWordList[0] : currentWordList.pop(); // make sure the list if never empty
 
         if (word) {
@@ -57,7 +54,7 @@ const currentWordObserver = new MutationObserver(async () => {
             });
 
             console.log("Spawning guesser");
-            wordGuesserId = setInterval(guessWord, 1_000);
+            wordGuesserId = setInterval(guessWord, 2_000);
             return;
         }
 
@@ -84,6 +81,9 @@ const currentWordObserver = new MutationObserver(async () => {
 
             currentWordList.length = 0;
             currentWordList.push(...filteredList);
+
+            console.log(`List length: ${currentWordList.length}`);
+            console.log(`Word List: ${currentWordList.slice(0, 10)}`);
         });
     }
 
