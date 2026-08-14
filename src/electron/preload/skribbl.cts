@@ -1,5 +1,5 @@
 import {ipcRendererInvoke} from "./ipc.js"
-import { Mutex } from "async-mutex";
+import { WordGuesser } from "./skribbl-util/wordGuesser.js"
 
 // Draw the word
 let gameCanvas: HTMLCanvasElement;
@@ -8,22 +8,8 @@ const canvasObserver = new MutationObserver(() => {
 });
 
 // Gues the word
-let chatInput: HTMLInputElement;
 let currentWordDiv: HTMLElement;
-const currentWordList: string[] = [];
-const wordListMutex = new Mutex();
-let wordGuesserId: NodeJS.Timeout;
-
-const guessWord = async () => {
-    await wordListMutex.runExclusive(() => {
-        const word = currentWordList.length === 1 ? currentWordList[0] : currentWordList.pop(); // make sure the list if never empty
-
-        if (word) {
-            chatInput.value = word;
-            chatInput.form?.requestSubmit();
-        }
-    });
-}
+let wordGuesser: WordGuesser;
 
 const currentWordObserver = new MutationObserver(async () => {
     const hintDivs = currentWordDiv?.querySelectorAll<HTMLDivElement>(".hint");
@@ -35,56 +21,11 @@ const currentWordObserver = new MutationObserver(async () => {
     }
 
     if (description === "WAITING") {
-        console.log("Round ended");
-        console.log("Killing guesser");
-        clearInterval(wordGuesserId);
-        await wordListMutex.runExclusive(() => {
-            currentWordList.length = 0; // clear array in place
-        });
-        return;
+        await wordGuesser.reset();
     }
 
     if (description === "GUESS THIS") {
-        // Begining of guessing round
-        if (currentWordList.length === 0) {
-            console.log("Word list is length is 0")
-            await wordListMutex.runExclusive(async () => {
-                currentWordList.push(...(await ipcRendererInvoke("getWordList", currentWord.length)));
-                console.log(`Current word: ${currentWord}`);
-            });
-
-            console.log("Spawning guesser");
-            wordGuesserId = setInterval(guessWord, 2_000);
-            return;
-        }
-
-        // Word revealed
-        if (!currentWord.includes("_")) {
-            console.log("Killing guesser");
-            clearInterval(wordGuesserId);
-            return;
-        }
-
-        // Hint unlocked
-        //TODO Spaces in word bricks the regex
-        console.log(currentWord);
-        const regexPattern = currentWord
-            .split("")
-            .map(char => (char === "_"  ? "." : char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))
-            .join("");
-
-        const regexp = new RegExp(`^${regexPattern}$`, "i");
-
-        await wordListMutex.runExclusive(() => {
-            let filteredList = [...currentWordList];
-            filteredList = filteredList.filter(word => regexp.test(word));
-
-            currentWordList.length = 0;
-            currentWordList.push(...filteredList);
-
-            console.log(`List length: ${currentWordList.length}`);
-            console.log(`Word List: ${currentWordList.slice(0, 10)}`);
-        });
+        await wordGuesser.update(currentWord);
     }
 
     if (description === "DRAW THIS") {
@@ -125,10 +66,10 @@ whenBodyLoaded(() => {
                 pending.delete(id);
             }
             if (id === "game-chat") {
-                const chat = element.querySelector<HTMLInputElement>("input");
-                if (!chat) continue;
+                const chatInput = element.querySelector<HTMLInputElement>("input");
+                if (!chatInput) continue;
                 
-                chatInput = chat;
+                wordGuesser = new WordGuesser(chatInput);
                 console.log("Game chat found");
                 pending.delete(id);
             }
@@ -141,6 +82,7 @@ whenBodyLoaded(() => {
         }
 
         if (pending.size === 0) {
+            console.log("All elements found. Disconnecting body observer");
             watcher.disconnect()
         }
     });
