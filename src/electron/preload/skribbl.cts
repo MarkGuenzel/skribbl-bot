@@ -1,16 +1,11 @@
 import {ipcRendererInvoke} from "./ipc.js"
-import { WordGuesser } from "./skribbl-util/wordGuesser.js"
+import WordGuesser from "./skribbl-util/wordGuesser.js"
+import ImageDrawer from "./skribbl-util/imageDrawer.js"
 
-// Draw the word
-let gameCanvas: HTMLCanvasElement;
-const canvasObserver = new MutationObserver(() => {
-    console.log("Canvas changed");
-});
 
-// Gues the word
 let currentWordDiv: HTMLElement;
 let wordGuesser: WordGuesser;
-
+let imageDrawer: ImageDrawer;
 const currentWordObserver = new MutationObserver(async () => {
     const hintDivs = currentWordDiv?.querySelectorAll<HTMLDivElement>(".hint");
     const description = currentWordDiv?.querySelectorAll<HTMLDivElement>(".description")[0].innerHTML;
@@ -30,11 +25,12 @@ const currentWordObserver = new MutationObserver(async () => {
 
     if (description === "DRAW THIS") {
         // draw code
+        imageDrawer.draw();
     }
 });
 
 const observerTargets = [
-    { id: "game-canvas", observer: canvasObserver, options: { childList: true, subtree: true, attributes: true} },
+    { id: "game-canvas" },
     { id: "game-chat" },
     { id: "game-word", observer: currentWordObserver, options: { characterData: true, childList: true, subtree: true, attributes: true } },
 ];
@@ -61,8 +57,7 @@ whenBodyLoaded(() => {
                 if (!canvas) continue;
 
                 console.log("Canvas found");
-                gameCanvas = canvas;
-                target.observer?.observe(canvas, target.options);
+                imageDrawer = new ImageDrawer(canvas)
                 pending.delete(id);
             }
             if (id === "game-chat") {

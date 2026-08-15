@@ -1,7 +1,7 @@
 import { Mutex } from "async-mutex";
 import { ipcRendererInvoke } from "../ipc.js";
 
-export class WordGuesser {
+export default class WordGuesser {
     private readonly chatInput: HTMLInputElement;
     private readonly currentWordList: string[] = [];
     private readonly wordListMutex = new Mutex();
