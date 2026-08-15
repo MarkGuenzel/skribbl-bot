@@ -15,13 +15,13 @@ const currentWordObserver = new MutationObserver(async () => {
         currentWord += letterDiv.innerText;
     }
 
-    if (description === "WAITING") {
-        await wordGuesser.reset();
-    }
+    // if (description === "WAITING") {
+    //     await wordGuesser.reset();
+    // }
 
-    if (description === "GUESS THIS") {
-        await wordGuesser.update(currentWord);
-    }
+    // if (description === "GUESS THIS") {
+    //     await wordGuesser.update(currentWord);
+    // }
 
     if (description === "DRAW THIS") {
         // draw code
