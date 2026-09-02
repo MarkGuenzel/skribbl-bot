@@ -1,6 +1,6 @@
-import { app, BaseWindow, ipcMain, WebContentsView } from "electron"
+import { app, BaseWindow, WebContentsView } from "electron"
 import path from "path"
-import { getPreloadPath, ipcMainHandle } from "./utils.js";
+import { getPreloadPath, ipcMainHandle, ipcMainOn } from "./utils.js";
 import { parse } from "csv-parse/sync";
 import { readFileSync } from "fs";
 type CSVRow = {
@@ -54,7 +54,8 @@ const loadWebContents = (mainWindow: BaseWindow) => {
     mainWindow.on("leave-full-screen", layout);
     mainWindow.on("maximize", layout);
     mainWindow.on("unmaximize", layout);
-    ipcMain.on("sidebarResize", (_, sidebarSize: number) => {
+
+    ipcMainOn("sidebarResize", (sidebarSize) => {
         sidebarWidth = sidebarSize;
         layout();
     });
@@ -78,5 +79,9 @@ app.on("ready", () => {
             .map(row => row.word);
 
         return wordList;
+    });
+
+    ipcMainOn("currentWord", (currentWord) => {
+        console.log(currentWord)
     });
 })
