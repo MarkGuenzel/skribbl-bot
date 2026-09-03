@@ -3,11 +3,14 @@ import path from "path"
 import { getPreloadPath, ipcMainHandle, ipcMainOn } from "./utils.js";
 import { parse } from "csv-parse/sync";
 import { readFileSync } from "fs";
+
 type CSVRow = {
     word: string,
     count: number
 }
 const csvPath = "src/electron/skribbl-words.csv"
+const SEARCH_URL = "https://priv.au/search"
+
 
 const loadWebContents = (mainWindow: BaseWindow) => {
     // Skribbl
@@ -61,6 +64,23 @@ const loadWebContents = (mainWindow: BaseWindow) => {
     });
 }
 
+const getImages = async (word: string) => {
+    const query = new URL(SEARCH_URL);
+    query.searchParams.set("q", word);
+    query.searchParams.set("category", "images");
+
+    const response = await fetch(query);
+    console.log({
+        status: response.status,
+        redirected: response.redirected,
+        url: response.url,
+        contentType: response.headers.get("content-type"),
+    });
+
+    const body = await response.text();
+    console.log(body.slice(0, 1000));
+}
+
 app.on("ready", () => {
     const mainWindow = new BaseWindow({
         width: 1200,
@@ -83,5 +103,10 @@ app.on("ready", () => {
 
     ipcMainOn("currentWord", (currentWord) => {
         console.log(currentWord)
+    });
+
+    ipcMainOn("searchImages", (searchQuery) => {
+        console.log("Triggered searchImages in main")
+        getImages(searchQuery);
     });
 })

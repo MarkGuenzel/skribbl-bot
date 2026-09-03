@@ -1,4 +1,4 @@
-import {ipcRendererInvoke} from "./ipc.js"
+import {ipcRendererInvoke, ipcRendererSend} from "./ipc.js"
 import WordGuesser from "./skribbl-util/wordGuesser.js"
 import ImageDrawer from "./skribbl-util/imageDrawer.js"
 
@@ -24,8 +24,8 @@ const currentWordObserver = new MutationObserver(async () => {
     // }
 
     if (description === "DRAW THIS") {
-        // draw code
-        imageDrawer.draw();
+        // Send current word to main process
+        ipcRendererSend("currentWord", currentWord);
     }
 });
 
