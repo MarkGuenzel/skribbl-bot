@@ -15,7 +15,7 @@ export function getPreloadPath(fileName: PreloadFile) {
 
 export function ipcMainHandle<Key extends keyof EventPayloadMapping>(
     channel: Key,
-    handler: (...args: EventPayloadMapping[Key]["args"]) => EventPayloadMapping[Key]["return"]
+    handler: (...args: EventPayloadMapping[Key]["args"]) => EventPayloadMapping[Key]["return"] | Promise<EventPayloadMapping[Key]["return"]>
 ): void {
     ipcMain.handle(channel, (_event, ...args: EventPayloadMapping[Key]["args"]) => handler(...args));
 }

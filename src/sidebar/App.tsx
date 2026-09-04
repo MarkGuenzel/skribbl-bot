@@ -27,7 +27,7 @@ function App() {
           onChange={(e) => {setSearchQuery(e.target.value)}}
         />
         <Button
-          onClick={() => {window.electron.searchImages(searchQuery)}}
+          onClick={async () => {console.log(await window.electron.getImages(searchQuery))}}
         >
           <Search/>
         </Button> 

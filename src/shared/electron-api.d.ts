@@ -1,4 +1,4 @@
 export type SidebarElectronApi = {
     sendSidebarResize: (size: number) => void
-    searchImages: (searchQuery: string) => void
+    getImages: (searchQuery: string) => Promise<string[]>
 }
