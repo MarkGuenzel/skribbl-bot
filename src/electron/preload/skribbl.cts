@@ -1,4 +1,4 @@
-import {ipcRendererInvoke, ipcRendererSend} from "./ipc.js"
+import {ipcRendererInvoke, ipcRendererSend, ipcRendererOn} from "./ipc.js"
 import WordGuesser from "./skribbl-util/wordGuesser.js"
 import ImageDrawer from "./skribbl-util/imageDrawer.js"
 
@@ -15,16 +15,15 @@ const currentWordObserver = new MutationObserver(async () => {
         currentWord += letterDiv.innerText;
     }
 
-    // if (description === "WAITING") {
-    //     await wordGuesser.reset();
-    // }
+    if (description === "WAITING") {
+        await wordGuesser.reset();
+    }
 
-    // if (description === "GUESS THIS") {
-    //     await wordGuesser.update(currentWord);
-    // }
+    if (description === "GUESS THIS") {
+        await wordGuesser.update(currentWord);
+    }
 
     if (description === "DRAW THIS") {
-        // Send current word to main process
         ipcRendererSend("currentWord", currentWord);
     }
 });
@@ -83,4 +82,9 @@ whenBodyLoaded(() => {
     });
 
     watcher.observe(document.body, { childList: true, subtree: true })
+});
+
+// Handle draw request
+ipcRendererOn("drawImage", (imageUrl) => {
+    imageDrawer.draw(imageUrl);
 });

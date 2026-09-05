@@ -1,6 +1,6 @@
 import { app, BaseWindow, WebContentsView } from "electron"
 import path from "path"
-import { getPreloadPath, ipcMainHandle, ipcMainOn } from "./utils.js";
+import { getPreloadPath, ipcMainHandle, ipcMainOn, ipcWebContentsSend } from "./utils.js";
 import { parse } from "csv-parse/sync";
 import { readFileSync, writeFileSync } from "fs";
 
@@ -63,6 +63,8 @@ const loadWebContents = (mainWindow: BaseWindow) => {
         sidebarWidth = sidebarSize;
         layout();
     });
+
+    return { gameView, sidebar };
 }
 
 const getImages = async (word: string) => {
@@ -97,15 +99,8 @@ const getImages = async (word: string) => {
     // );    
 }
 
-app.on("ready", () => {
-    const mainWindow = new BaseWindow({
-        width: 1200,
-        height: 800,
-    });
-
-    loadWebContents(mainWindow);
-
-    ipcMainHandle("getWordList", (wordLength: number) => {
+const registerIpcHandlers = (views: {gameView: WebContentsView, sidebar: WebContentsView}) => {
+   ipcMainHandle("getWordList", (wordLength: number) => {
         const records: CSVRow[] = parse(
             readFileSync(csvPath, "utf-8"),
             { columns: true, skip_empty_lines: true, cast: true }
@@ -126,4 +121,21 @@ app.on("ready", () => {
         console.log(currentWord)
     });
 
+    ipcMainOn("drawImage", (imageUrl) => {
+        ipcWebContentsSend(
+            "drawImage",
+            views.gameView.webContents,
+            imageUrl
+        )
+    });
+}
+
+app.on("ready", () => {
+    const mainWindow = new BaseWindow({
+        width: 1200,
+        height: 800,
+    });
+
+    const views = loadWebContents(mainWindow);
+    registerIpcHandlers(views);
 })

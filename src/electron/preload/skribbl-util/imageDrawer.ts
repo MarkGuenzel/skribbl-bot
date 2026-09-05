@@ -13,7 +13,12 @@ export default class ImageDrawer {
         this.canvas = canvas
     }
 
-    public draw() {
+    public draw(imageUrl: string) {
+        if (imageUrl) {
+            console.log(`Drawing Image: ${imageUrl}`);
+            return;
+        }
+        
         console.log("Drawing image...");
         setTimeout(() => {
             void this.drawLine({x: 50, y: 50}, {x:150, y: 150});
