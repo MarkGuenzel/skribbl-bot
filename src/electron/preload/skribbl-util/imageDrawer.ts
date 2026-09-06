@@ -1,4 +1,7 @@
 import { resolve } from "path";
+import { Jimp } from "jimp";
+import { get as httpGet } from "node:http";
+import { get as httpsGet } from "node:https";
 
 type Point = {
     x: number,
@@ -13,16 +16,60 @@ export default class ImageDrawer {
         this.canvas = canvas
     }
 
-    public draw(imageUrl: string) {
-        if (imageUrl) {
-            console.log(`Drawing Image: ${imageUrl}`);
-            return;
-        }
-        
-        console.log("Drawing image...");
-        setTimeout(() => {
-            void this.drawLine({x: 50, y: 50}, {x:150, y: 150});
-        }, 2_000);
+    public async draw(imageUrl: string) {
+        const imageBuffer = await this.fetchImageBytes(imageUrl);
+        const image = await Jimp.read(imageBuffer);
+        console.log(`Original Image: W: ${image.width}, H: ${image.height}`);
+        image.resize({
+            w: this.canvas.width, 
+            h: this.canvas.height
+        });
+        console.log(`Resized Image: W: ${image.width}, H: ${image.height}`);
+    }
+
+    private fetchImageBytes(imageUrl: string, redirectsLeft: number = 5): Promise<Buffer> {
+        return new Promise((resolve, reject) => {
+            const get = imageUrl.startsWith("http:") ? httpGet : httpsGet;
+            const requestOptions = {
+                headers: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                    "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+                    "Referer": new URL(imageUrl).origin,
+                },
+            };
+            get(imageUrl, requestOptions, (response) => {
+                const { statusCode, headers } = response;
+
+                if (statusCode && statusCode >= 300 && statusCode < 400 && headers.location) {
+                    response.resume();
+                    if (redirectsLeft <= 0) {
+                        reject(new Error(`Too many redirects fetching the image: ${imageUrl}`))
+                        return;
+                    }
+
+                    resolve(this.fetchImageBytes(new URL(headers.location, imageUrl).toString(), redirectsLeft - 1));
+                    return;
+                }
+
+                if (statusCode !== 200) {
+                    response.resume();
+                    reject(new Error(`Failed to fetch image (${statusCode}): ${imageUrl}`));
+                    return;
+                }
+
+                const contentType = headers["content-type"] ?? "";
+                if (!contentType.startsWith("image/")) {
+                    response.resume();
+                    reject(new Error(`Expected an image but got content-type "${contentType}" from ${imageUrl}`))
+                    return;
+                }
+
+                const chunks: Buffer[] = []
+                response.on("data", (chunk: Buffer) => chunks.push(chunk))
+                response.on("end", () => resolve(Buffer.concat(chunks)))
+                response.on("error", reject)
+            }).on("error", reject);
+        });
     }
 
     private async drawLine(start: Point, end: Point) {
