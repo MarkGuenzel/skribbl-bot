@@ -1,5 +1,6 @@
 import { resolve } from "path";
 import { Jimp } from "jimp";
+import { intToRGBA } from "@jimp/utils";
 import { get as httpGet } from "node:http";
 import { get as httpsGet } from "node:https";
 
@@ -7,13 +8,42 @@ type Point = {
     x: number,
     y: number
 }
+
+type GameColor = {
+    div: HTMLDivElement,
+    color: {
+        r: number,
+        g: number,
+        b: number
+    }
+}
+
 type PointerEventType = "pointerdown" | "pointermove" | "pointerup";
 
 export default class ImageDrawer {
     private canvas: HTMLCanvasElement;
+    private colors: GameColor[];
 
-    constructor(canvas: HTMLCanvasElement) {
-        this.canvas = canvas
+    constructor(canvas: HTMLCanvasElement, colorDivs: NodeListOf<HTMLDivElement>) {
+        this.canvas = canvas;
+
+        const gameColors: GameColor[] = [];
+        for(const colorDiv of colorDivs) {
+            const style = colorDiv.style.backgroundColor;
+            const match = style.match(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/);
+
+            if (match) {
+                const [, r, g, b] = match;
+
+                gameColors.push({
+                    div: colorDiv,
+                    color: {r: Number(r), g: Number(g), b: Number(b)}
+                })
+            }
+
+        }
+        this.colors = gameColors;
+        console.log(this.colors);
     }
 
     public async draw(imageUrl: string) {
@@ -24,7 +54,18 @@ export default class ImageDrawer {
             w: this.canvas.width, 
             h: this.canvas.height
         });
-        console.log(`Resized Image: W: ${image.width}, H: ${image.height}`);
+
+        for (let y = 0; y < image.height; y++){
+            for (let x = 0; x < image.width; x++) {
+                const pixel = intToRGBA(image.getPixelColor(x, y));
+                const isWhite = (pixel.r + pixel.g + pixel.b) >= 750
+
+                if (pixel.a < 255 && isWhite) {
+                    console.log("Pixel is white or transparent");
+                    continue
+                }
+            }
+        }
     }
 
     private fetchImageBytes(imageUrl: string, redirectsLeft: number = 5): Promise<Buffer> {

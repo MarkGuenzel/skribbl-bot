@@ -30,6 +30,7 @@ const currentWordObserver = new MutationObserver(async () => {
 
 const observerTargets = [
     { id: "game-canvas" },
+    { id: "game-toolbar" },
     { id: "game-chat" },
     { id: "game-word", observer: currentWordObserver, options: { characterData: true, childList: true, subtree: true, attributes: true } },
 ];
@@ -46,6 +47,9 @@ function whenBodyLoaded(callback: () => void) {
 // Append Observers and get HTMLElements
 whenBodyLoaded(() => {
     const pending = new Map(observerTargets.map(t => [t.id, t]));
+    let gameCanvas: HTMLCanvasElement ;
+    let gameColors: NodeListOf<HTMLDivElement>;
+    
     const watcher = new MutationObserver(() => {
         for (const [id, target] of pending) {
             const element = document.getElementById(id);
@@ -56,7 +60,7 @@ whenBodyLoaded(() => {
                 if (!canvas) continue;
 
                 console.log("Canvas found");
-                imageDrawer = new ImageDrawer(canvas)
+                gameCanvas = canvas;
                 pending.delete(id);
             }
             if (id === "game-chat") {
@@ -73,10 +77,19 @@ whenBodyLoaded(() => {
                 target.observer?.observe(element, target.options);
                 pending.delete(id);
             }
+            if (id === "game-toolbar") {
+                const colors = element.querySelectorAll<HTMLDivElement>(".color");
+                if (!colors) continue;
+
+                console.log("Colors found");
+                gameColors = colors;
+                pending.delete(id);
+            }
         }
 
         if (pending.size === 0) {
             console.log("All elements found. Disconnecting body observer");
+            imageDrawer = new ImageDrawer(gameCanvas, gameColors);
             watcher.disconnect()
         }
     });
