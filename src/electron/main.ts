@@ -67,36 +67,25 @@ const loadWebContents = (mainWindow: BaseWindow) => {
     return { gameView, sidebar };
 }
 
-const getImages = async (word: string) => {
+const getImages = async (word: string): Promise<string[]> => {
     const query = new URL(SEARCH_URL);
     query.searchParams.set("q", word);
     query.searchParams.set("categories", "images");
     query.searchParams.set("format", "json");
 
-    // Load test json
-    const testJson = JSON.parse(readFileSync("test.json", "utf-8"));
-    const imageUrls = [];
-    for (const result of testJson.results.slice(0, 10)) {
-        imageUrls.push(result.img_src);
-    }
+    const response = await fetch(query);
+    console.log({
+        status: response.status,
+        redirected: response.redirected,
+        url: response.url,
+        contentType: response.headers.get("content-type"),
+    });
 
-    console.log(imageUrls);
-    return imageUrls;
-
-    // const response = await fetch(query);
-    // console.log({
-    //     status: response.status,
-    //     redirected: response.redirected,
-    //     url: response.url,
-    //     contentType: response.headers.get("content-type"),
-    // });
-
-    // const data = await response.json();
-    // writeFileSync(
-    //     "test.json",
-    //     JSON.stringify(data, null, 2),
-    //     "utf-8"
-    // );    
+    const data: SearchResponse = await response.json();
+    const imageUrls = []
+    return data.results
+        .slice(1, 20)
+        .map(result => result.img_src);
 }
 
 const registerIpcHandlers = (views: {gameView: WebContentsView, sidebar: WebContentsView}) => {
@@ -117,8 +106,9 @@ const registerIpcHandlers = (views: {gameView: WebContentsView, sidebar: WebCont
         return await getImages(searchQuery);    
     });
 
-    ipcMainOn("currentWord", (currentWord) => {
-        console.log(currentWord)
+    ipcMainOn("currentWord", async (currentWord) => {
+        console.log(`Received current word from skribbl: ${currentWord}`);
+        const imageUrls = await getImages(currentWord + " piktogramm");
     });
 
     ipcMainOn("drawImage", (imageUrl) => {

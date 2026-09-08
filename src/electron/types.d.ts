@@ -9,3 +9,29 @@ type EventPayloadMapping = {
 }
 
 type UnsubscribeFunction = () => void;
+
+interface SearchResult {
+    template: string;
+    url: string;
+    title: string;
+    content: string;
+    img_src: string;
+    img_format?: string;
+    engine: string;
+    parsed_url: string[];
+    thumbnail: string;
+    priority: string;
+    engines: string[];
+    positions: number[];
+    score: number;
+    category: string;
+    publishedDate: string | null;
+    iframe_src: string | null;
+    thumbnail_src?: string; // only present on some results (e.g. unsplash)
+}
+
+interface SearchResponse {
+    query: string;
+    results: SearchResult[];
+    // ...any other top-level fields you care about (e.g. suggestions, answers, etc.)
+}

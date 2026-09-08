@@ -2,10 +2,16 @@ import {ipcRendererInvoke, ipcRendererSend, ipcRendererOn} from "./ipc.js"
 import WordGuesser from "./skribbl-util/wordGuesser.js"
 import ImageDrawer from "./skribbl-util/imageDrawer.js"
 
+enum RoundDescription {
+  WAITING = "WAITING",
+  GUESS_THIS = "GUESS THIS",
+  DRAW_THIS = "DRAW THIS",
+}
 
 let currentWordDiv: HTMLElement;
 let wordGuesser: WordGuesser;
 let imageDrawer: ImageDrawer;
+let currentRoundDescription = RoundDescription.WAITING;
 const currentWordObserver = new MutationObserver(async () => {
     const hintDivs = currentWordDiv?.querySelectorAll<HTMLDivElement>(".hint");
     const description = currentWordDiv?.querySelectorAll<HTMLDivElement>(".description")[0].innerHTML;
@@ -15,15 +21,18 @@ const currentWordObserver = new MutationObserver(async () => {
         currentWord += letterDiv.innerText;
     }
 
-    if (description === "WAITING") {
+    if (description === RoundDescription.WAITING) {
+        currentRoundDescription = RoundDescription.WAITING;
         await wordGuesser.reset();
     }
 
-    if (description === "GUESS THIS") {
+    if (description === RoundDescription.GUESS_THIS) {
+        currentRoundDescription = RoundDescription.GUESS_THIS;
         await wordGuesser.update(currentWord);
     }
 
-    if (description === "DRAW THIS") {
+    if (description === RoundDescription.DRAW_THIS) {
+        currentRoundDescription = RoundDescription.DRAW_THIS;
         ipcRendererSend("currentWord", currentWord);
     }
 });
@@ -99,5 +108,10 @@ whenBodyLoaded(() => {
 
 // Handle draw request
 ipcRendererOn("drawImage", (imageUrl) => {
+    if (currentRoundDescription !== RoundDescription.DRAW_THIS) {
+        console.log(`Current round phase is ${currentRoundDescription}. Unable to draw`);
+        return;
+    }
+    
     imageDrawer.draw(imageUrl);
 });

@@ -43,7 +43,6 @@ export default class ImageDrawer {
 
         }
         this.colors = gameColors;
-        console.log(this.colors);
     }
 
     public async draw(imageUrl: string) {
@@ -65,6 +64,10 @@ export default class ImageDrawer {
                     continue
                 }
             }
+            this.dispatchPointerEvent("pointerdown", {x: 0, y}, 1);
+            await this.nextFrame();
+            this.dispatchPointerEvent("pointermove", {x: image.width, y}, 1);
+            this.dispatchPointerEvent("pointerup", {x: image.width, y}, 0);
         }
     }
 
@@ -111,25 +114,6 @@ export default class ImageDrawer {
                 response.on("error", reject)
             }).on("error", reject);
         });
-    }
-
-    private async drawLine(start: Point, end: Point) {
-        const points: Point[] = [];
-        const steps = 20
-        for (let i = 0; i <= steps; i++) {
-            const t = i /steps;
-            points.push({
-                x: start.x + (end.x - start.x) * t,
-                y: start.y + (end.y - start.y) * t
-            });
-        }
-
-        this.dispatchPointerEvent("pointerdown", points[0], 1);
-        for (const point of points.slice(1)) {
-            await this.nextFrame();
-            this.dispatchPointerEvent("pointermove", point, 1)
-        }
-        this.dispatchPointerEvent("pointerup", points[points.length - 1], 0)
     }
 
     private nextFrame() {
