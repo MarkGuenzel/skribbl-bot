@@ -1,0 +1,1 @@
+cd src/searxng && docker compose up -d
