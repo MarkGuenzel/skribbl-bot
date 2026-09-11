@@ -1,6 +1,6 @@
 import { resolve } from "path";
-import { Jimp } from "jimp";
-import { intToRGBA } from "@jimp/utils";
+import { Jimp, RGBAColor } from "jimp";
+import { colorDiff, intToRGBA } from "@jimp/utils";
 import { get as httpGet } from "node:http";
 import { get as httpsGet } from "node:https";
 
@@ -11,13 +11,16 @@ type Point = {
 
 type GameColor = {
     div: HTMLDivElement,
-    color: {
-        r: number,
-        g: number,
-        b: number
-    }
+    color: RGBAColor
 }
 
+type Stroke = {
+    color: number,
+    from: Point,
+    to: Point
+}
+
+type JimpImage = Awaited<ReturnType<typeof Jimp.read>>;
 type PointerEventType = "pointerdown" | "pointermove" | "pointerup";
 
 export default class ImageDrawer {
@@ -37,7 +40,7 @@ export default class ImageDrawer {
 
                 gameColors.push({
                     div: colorDiv,
-                    color: {r: Number(r), g: Number(g), b: Number(b)}
+                    color: {r: Number(r), g: Number(g), b: Number(b), a: 0}
                 })
             }
 
@@ -54,21 +57,103 @@ export default class ImageDrawer {
             h: this.canvas.height
         });
 
+        const colorIds = this.convertToColorIds(image);
+        const strokes = this.createStrokes(colorIds, image.width);
+
+        console.log(colorIds.slice(0, 30));
+        console.log(strokes.slice(0, 30));
+
+        strokes.forEach(async (stroke) => await this.executeStroke(stroke))
+    }
+
+    private redmeanDistance(c1: RGBAColor, c2: RGBAColor): number {
+        const rmean = (c1.r + c2.r) / 2;
+        const dr = c1.r - c2.r;
+        const dg = c1.g - c2.g;
+        const db = c1.b - c2.b;
+        const weightR = 2 + rmean / 256;
+        const weightG = 4.0;
+        const weightB = 2 + (255 - rmean) / 256;
+
+        return weightR * dr * dr + weightG * dg * dg + weightB * db * db;
+    }
+
+    private convertToColorIds(image: JimpImage): number[] {
+        const convertedImage: number[] = [];
+
         for (let y = 0; y < image.height; y++){
             for (let x = 0; x < image.width; x++) {
                 const pixel = intToRGBA(image.getPixelColor(x, y));
-                const isWhite = (pixel.r + pixel.g + pixel.b) >= 750
+                let closestId = 0;
+                let closestDistance = Infinity;
 
-                if (pixel.a < 255 && isWhite) {
-                    console.log("Pixel is white or transparent");
-                    continue
+                this.colors.forEach((color, id) => {
+                    const distance = this.redmeanDistance(color.color, pixel);
+
+                    if (distance < closestDistance) {
+                        closestId = id;
+                        closestDistance = distance;
+                    }
+                });
+
+                convertedImage.push(closestId);
+            }
+        }
+
+        return convertedImage;
+    }
+
+    private createStrokes(image: number[], width: number): Stroke[] {
+        let currentColor = image[0];
+        let firstPoint: Point = {x: 0, y: 0};
+        const strokes: Stroke[] = [];
+
+        image.forEach((colorId, idx) => {
+            const x = idx % width;
+            const y = Math.floor(idx / width);
+
+            if (currentColor !== colorId) {
+
+                strokes.push({
+                    color: currentColor,
+                    from: firstPoint,
+                    to: {x: x - 1, y}
+                });
+
+                currentColor = colorId;
+                firstPoint = {x, y};
+            }
+
+            if (x === width - 1) {
+                strokes.push({
+                    color: currentColor,
+                    from: firstPoint,
+                    to: {x, y}
+                });
+
+                if (idx + 1 < image.length) {
+                    currentColor = image[idx + 1];
+                    firstPoint = {x: 0, y:  y + 1};
                 }
             }
-            this.dispatchPointerEvent("pointerdown", {x: 0, y}, 1);
-            await this.nextFrame();
-            this.dispatchPointerEvent("pointermove", {x: image.width, y}, 1);
-            this.dispatchPointerEvent("pointerup", {x: image.width, y}, 0);
-        }
+        });
+
+        return strokes;
+    }
+
+    private selectColor(colorId:  number) {
+        this.dispatchPointerEventOn(this.colors[colorId].div, "pointerenter", 0);
+        this.dispatchPointerEventOn(this.colors[colorId].div, "pointerdown", 1);
+    }
+
+    private async executeStroke(stroke: Stroke) {
+        this.selectColor(stroke.color);
+        await this.nextFrame()
+
+        this.dispatchPointerEvent("pointerdown", stroke.from, 1);
+        await this.nextFrame();
+        this.dispatchPointerEvent("pointermove", stroke.to, 1);
+        this.dispatchPointerEvent("pointerup", stroke.to, 0);
     }
 
     private fetchImageBytes(imageUrl: string, redirectsLeft: number = 5): Promise<Buffer> {
@@ -139,5 +224,28 @@ export default class ImageDrawer {
         }
 
         this.canvas.dispatchEvent(new PointerEvent(type, eventInit));
+    }
+
+    private dispatchPointerEventOn(
+        element: HTMLElement,
+        type: "pointerdown" | "pointerenter" | "pointerup",
+        buttons: 0 | 1
+    ) {
+        const rect = element.getBoundingClientRect();
+
+        const eventInit: PointerEventInit = {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2,
+            pointerId: 1,
+            pointerType: "mouse",
+            isPrimary: true,
+            button: 0,
+            buttons,
+        };
+
+        element.dispatchEvent(new PointerEvent(type, eventInit));
     }
 }

@@ -82,7 +82,6 @@ const getImages = async (word: string): Promise<string[]> => {
     });
 
     const data: SearchResponse = await response.json();
-    const imageUrls = []
     return data.results
         .slice(1, 20)
         .map(result => result.img_src);
