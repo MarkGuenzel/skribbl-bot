@@ -15,7 +15,7 @@ type GameColor = {
 }
 
 type Stroke = {
-    color: number,
+    colorId: number,
     from: Point,
     to: Point
 }
@@ -63,7 +63,15 @@ export default class ImageDrawer {
         console.log(colorIds.slice(0, 30));
         console.log(strokes.slice(0, 30));
 
-        strokes.forEach(async (stroke) => await this.executeStroke(stroke))
+        for (const stroke of strokes) {
+            const strokeColor = this.colors[stroke.colorId].color;
+            if (strokeColor.r === 255 && strokeColor.g === 255 && strokeColor.b === 255) {
+                 continue;
+            }
+            await this.executeStroke(stroke);
+        }
+
+        console.log("Finished drawing the image");
     }
 
     private redmeanDistance(c1: RGBAColor, c2: RGBAColor): number {
@@ -115,7 +123,7 @@ export default class ImageDrawer {
             if (currentColor !== colorId) {
 
                 strokes.push({
-                    color: currentColor,
+                    colorId: currentColor,
                     from: firstPoint,
                     to: {x: x - 1, y}
                 });
@@ -126,7 +134,7 @@ export default class ImageDrawer {
 
             if (x === width - 1) {
                 strokes.push({
-                    color: currentColor,
+                    colorId: currentColor,
                     from: firstPoint,
                     to: {x, y}
                 });
@@ -142,12 +150,12 @@ export default class ImageDrawer {
     }
 
     private selectColor(colorId:  number) {
-        this.dispatchPointerEventOn(this.colors[colorId].div, "pointerenter", 0);
         this.dispatchPointerEventOn(this.colors[colorId].div, "pointerdown", 1);
+        this.dispatchPointerEventOn(this.colors[colorId].div, "pointerup", 0);
     }
 
     private async executeStroke(stroke: Stroke) {
-        this.selectColor(stroke.color);
+        this.selectColor(stroke.colorId);
         await this.nextFrame()
 
         this.dispatchPointerEvent("pointerdown", stroke.from, 1);
