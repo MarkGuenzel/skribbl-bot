@@ -58,16 +58,21 @@ export default class ImageDrawer {
         });
 
         const colorIds = this.convertToColorIds(image);
-        const strokes = this.createStrokes(colorIds, image.width);
+        let strokes = this.createStrokes(colorIds, image.width);
+        console.log(`Amount of strokes: ${strokes.length}`);
+        strokes = this.filterStrokes(strokes);
+        console.log(`Amount of strokes after filter: ${strokes.length}`);
+        strokes.sort((a, b) => (a.colorId - b.colorId));
 
-        console.log(colorIds.slice(0, 30));
-        console.log(strokes.slice(0, 30));
-
+        let lastColorId = null;
         for (const stroke of strokes) {
-            const strokeColor = this.colors[stroke.colorId].color;
-            if (strokeColor.r === 255 && strokeColor.g === 255 && strokeColor.b === 255) {
-                 continue;
+            const currentColorId = stroke.colorId;
+            if (lastColorId === null || lastColorId !== currentColorId) {
+                this.selectColor(stroke.colorId);
+                await this.nextFrame();
+                lastColorId = currentColorId;
             }
+
             await this.executeStroke(stroke);
         }
 
@@ -149,15 +154,30 @@ export default class ImageDrawer {
         return strokes;
     }
 
+    private filterStrokes(
+        strokes: Stroke[], 
+        filterWhite: boolean = true, 
+        minStrokeLength: number = 3
+    ): Stroke[] {
+        return strokes.filter(stroke => {
+            const strokeColor = this.colors[stroke.colorId].color
+            if (filterWhite && (strokeColor.r + strokeColor.g + strokeColor.b === 765)) {
+                return false;
+            }
+            if (stroke.to.x - stroke.from.x < minStrokeLength) {
+                return false;
+            }
+
+            return true;
+        });
+    }
+
     private selectColor(colorId:  number) {
         this.dispatchPointerEventOn(this.colors[colorId].div, "pointerdown", 1);
         this.dispatchPointerEventOn(this.colors[colorId].div, "pointerup", 0);
     }
 
     private async executeStroke(stroke: Stroke) {
-        this.selectColor(stroke.colorId);
-        await this.nextFrame()
-
         this.dispatchPointerEvent("pointerdown", stroke.from, 1);
         await this.nextFrame();
         this.dispatchPointerEvent("pointermove", stroke.to, 1);
