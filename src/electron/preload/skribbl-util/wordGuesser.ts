@@ -6,6 +6,7 @@ export default class WordGuesser {
     private readonly currentWordList: string[] = [];
     private readonly wordListMutex = new Mutex();
     private wordGuesserId!: NodeJS.Timeout;
+    private isRunning = false;
 
     constructor(chatInput: HTMLInputElement) {
         this.chatInput = chatInput;
@@ -17,6 +18,17 @@ export default class WordGuesser {
         await this.wordListMutex.runExclusive(() => {
             this.currentWordList.splice(0);
         });
+        this.isRunning = false;
+    }
+
+    public stop() {
+        this.isRunning = false;
+        console.log("Pausing Word Guesser");
+    }
+
+    public resume() {
+        this.isRunning = true;
+        console.log("Resuming Image Drawer");
     }
 
     public async update(currentWord: string) {
@@ -27,6 +39,7 @@ export default class WordGuesser {
             });
 
             console.log("Spawning Word Guesser");
+            this.isRunning = true;
             this.wordGuesserId = setInterval(this.guessWord, 2_000);
             return;
         }
@@ -56,6 +69,8 @@ export default class WordGuesser {
 
     private guessWord = async () => {
         await this.wordListMutex.runExclusive(() => {
+            if (!this.isRunning) return;
+
             console.log(`Word list length: ${this.currentWordList.length}`)
             const word = this.currentWordList.length === 1 ? this.currentWordList[0] : this.currentWordList.pop();
 

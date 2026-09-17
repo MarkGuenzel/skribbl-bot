@@ -115,7 +115,23 @@ const registerIpcHandlers = (views: {gameView: WebContentsView, sidebar: WebCont
             "drawImage",
             views.gameView.webContents,
             imageUrl
-        )
+        );
+    });
+
+    ipcMainOn("cancelProcess", (proccess) => {
+        ipcWebContentsSend(
+            "cancelProcess",
+            views.gameView.webContents,
+            proccess
+        );
+    });
+
+    ipcMainOn("resumeProcess", (proccess) => {
+        ipcWebContentsSend(
+            "resumeProcess",
+            views.gameView.webContents,
+            proccess
+        );
     });
 }
 

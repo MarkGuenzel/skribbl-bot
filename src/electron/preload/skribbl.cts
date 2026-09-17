@@ -115,3 +115,28 @@ ipcRendererOn("drawImage", (imageUrl) => {
     
     imageDrawer.draw(imageUrl);
 });
+
+ipcRendererOn("cancelProcess", (process) => {
+    switch (process) {
+        case "wordGuesser":
+            wordGuesser.stop();
+            break;
+        case "imageDrawer":
+            imageDrawer.cancel();
+            break;
+        default:
+            console.log(`Process [${process}] not found`)
+    }
+});
+
+ipcRendererOn("resumeProcess", (process) => {
+    switch (process) {
+        case "wordGuesser":
+            wordGuesser.resume();
+            break;
+        case "imageDrawer":
+            break
+        default:
+            console.log(`Process [${process}] not found`)
+    }
+});

@@ -1,4 +1,5 @@
-type PreloadFile = "sidebar.cjs" | "skribbl.cjs"
+type PreloadFile = "sidebar.cjs" | "skribbl.cjs";
+type SkribblProcess = "imageDrawer" | "wordGuesser";
 
 type EventPayloadMapping = {
     sidebarResize: { args: [size: number], return: void},
@@ -6,6 +7,8 @@ type EventPayloadMapping = {
     currentWord:{args: [currentWod: string], return: void}
     getImages: {args: [searchQuery: string], return: string[]}
     drawImage: {args: [imageUrl: string], return: void}
+    cancelProcess: {args: [process: SkribblProcess], return: void}
+    resumeProcess: {args: [process: SkribblProcess], return: void}
 }
 
 type UnsubscribeFunction = () => void;

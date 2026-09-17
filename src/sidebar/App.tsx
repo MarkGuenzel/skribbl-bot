@@ -44,6 +44,21 @@ function App() {
           <Search/>
         </Button> 
       </div>
+      <Button
+        onClick={() => window.electron.cancelProcess("imageDrawer")}
+      >
+        Cancel Drawing
+      </Button>
+      <Button
+        onClick={() => window.electron.cancelProcess("wordGuesser")}
+      >
+        Pause Word Guesser
+      </Button>
+            <Button
+        onClick={() => window.electron.resumeProcess("wordGuesser")}
+      >
+        Resume Word Guesser
+      </Button>
       <div>
           {imageUrls.length > 0 && (
             imageUrls.map((url) => (

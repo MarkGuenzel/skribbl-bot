@@ -1,5 +1,5 @@
 import { resolve } from "path";
-import { Jimp, RGBAColor } from "jimp";
+import { Jimp, ResizeStrategy, RGBAColor } from "jimp";
 import { colorDiff, intToRGBA } from "@jimp/utils";
 import { get as httpGet } from "node:http";
 import { get as httpsGet } from "node:https";
@@ -26,6 +26,7 @@ type PointerEventType = "pointerdown" | "pointermove" | "pointerup";
 export default class ImageDrawer {
     private canvas: HTMLCanvasElement;
     private colors: GameColor[];
+    private isRunning = false;
 
     constructor(canvas: HTMLCanvasElement, colorDivs: NodeListOf<HTMLDivElement>) {
         this.canvas = canvas;
@@ -54,7 +55,8 @@ export default class ImageDrawer {
         console.log(`Original Image: W: ${image.width}, H: ${image.height}`);
         image.resize({
             w: this.canvas.width, 
-            h: this.canvas.height
+            h: this.canvas.height,
+            mode: ResizeStrategy.NEAREST_NEIGHBOR
         });
 
         const colorIds = this.convertToColorIds(image);
@@ -64,8 +66,11 @@ export default class ImageDrawer {
         console.log(`Amount of strokes after filter: ${strokes.length}`);
         strokes.sort((a, b) => (a.colorId - b.colorId));
 
+        this.isRunning = true;
         let lastColorId = null;
         for (const stroke of strokes) {
+            if (!this.isRunning) break;
+
             const currentColorId = stroke.colorId;
             if (lastColorId === null || lastColorId !== currentColorId) {
                 this.selectColor(stroke.colorId);
@@ -77,6 +82,11 @@ export default class ImageDrawer {
         }
 
         console.log("Finished drawing the image");
+    }
+
+    public cancel() {
+        this.isRunning = false;
+        console.log("Stopping Image Drawer");
     }
 
     private redmeanDistance(c1: RGBAColor, c2: RGBAColor): number {
