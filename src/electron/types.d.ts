@@ -6,6 +6,7 @@ type EventPayloadMapping = {
     getWordList: {args: [wordLength: number], return: string[]}
     currentWord:{args: [currentWod: string], return: void}
     getImages: {args: [searchQuery: string], return: string[]}
+    imageUrls: {args: [imageUrls: string[]], return: void}
     drawImage: {args: [imageUrl: string], return: void}
     cancelProcess: {args: [process: SkribblProcess], return: void}
     resumeProcess: {args: [process: SkribblProcess], return: void}

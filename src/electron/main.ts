@@ -106,8 +106,18 @@ const registerIpcHandlers = (views: {gameView: WebContentsView, sidebar: WebCont
     });
 
     ipcMainOn("currentWord", async (currentWord) => {
+        if (currentWord === "") {
+            console.log(`Received empty word to draw from skribbl`);
+            return;
+        }
+        
         console.log(`Received current word from skribbl: ${currentWord}`);
         const imageUrls = await getImages(currentWord + " piktogramm");
+        ipcWebContentsSend(
+            "imageUrls",
+            views.sidebar.webContents,
+            imageUrls
+        )
     });
 
     ipcMainOn("drawImage", (imageUrl) => {

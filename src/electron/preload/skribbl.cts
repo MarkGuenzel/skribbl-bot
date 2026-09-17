@@ -33,6 +33,7 @@ const currentWordObserver = new MutationObserver(async () => {
 
     if (description === RoundDescription.DRAW_THIS) {
         currentRoundDescription = RoundDescription.DRAW_THIS;
+        currentWord = currentWordDiv?.querySelector<HTMLDivElement>(".word")?.innerHTML || "";
         ipcRendererSend("currentWord", currentWord);
     }
 });

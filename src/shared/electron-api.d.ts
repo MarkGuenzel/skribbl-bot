@@ -6,4 +6,5 @@ export type SidebarElectronApi = {
     drawImage: (imageUrl: string) => void
     cancelProcess: (process: SkribblProcess) => void
     resumeProcess: (process: SkribblProcess) => void
+    onImageUrls:  (callback: (imageUrls: string[]) => void) => void
 }

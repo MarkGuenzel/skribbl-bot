@@ -15,6 +15,11 @@ function App() {
     window.electron.sendSidebarResize(open ? SIDEBAR_WIDTH : 40)
   }, [open])
 
+  useEffect(() => {
+    const unsubscribe = window.electron.onImageUrls(setImageUrls);
+    return unsubscribe;
+  }, [])
+
   return (
     <>
       <Button
