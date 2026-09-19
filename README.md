@@ -1,7 +1,40 @@
 # skribbl-bot
 
-A full-autopilot automation tool for [skribbl.io](https://skribbl.io), the online
-drawing-and-guessing party game. It plays the game on your behalf:
+A full-autopilot bot for [skribbl.io](https://skribbl.io), the online drawing-and-guessing
+party game. It plays both halves of the game loop end-to-end: guessing the secret word from
+chat/hint state, and drawing a fetched reference image onto the canvas when it's your turn —
+while a live sidebar shows what it's doing and lets you step in at any point.
+
+<p float="left">
+  <img src="docs/images/word-guesser.png" width="260" alt="Sidebar mid-guessing round, showing the narrowed list of candidate words" />
+  <img src="docs/images/image-drawer.png" width="260" alt="Sidebar mid-draw, showing stroke progress and the reference image picker" />
+</p>
+
+<!--
+  TODO(showcase): these two are real sidebar-only captures from a UI review pass. The more
+  impressive shots — a before/after of a source photo next to what the bot actually drew on
+  the skribbl.io canvas, and a screen recording of a draw in progress — need to come from an
+  actual play session. Drop them in docs/images/ and link them here when you have them.
+-->
+
+## Why it's interesting
+
+- **Perceptual color quantization** — reference images are matched to skribbl's ~20-color
+  palette using "redmean" color distance rather than naive RGB distance, so the mapped
+  colors look closer to the source than they would with plain Euclidean matching.
+- **Pixels to pen strokes** — the quantized image is run-length encoded into horizontal
+  strokes, then replayed on the canvas as synthesized pointer events timed like a real drag,
+  rather than dabbing pixel by pixel.
+- **Cancellation-safe automation** — both the guesser and the drawer run long async
+  pipelines (network fetch, image decode, hundreds of timed strokes) against a game that can
+  change state at any moment (round ends, user picks a new image). Each run is tagged and
+  every await point checks whether it's been superseded, and shared state is mutex-guarded,
+  so restarting mid-flight never races itself.
+- **Two-view Electron architecture** — the live skribbl.io page and the control panel are
+  separate `WebContentsView`s in one window, coordinated over IPC, with a preload script
+  doing DOM automation directly against the unmodified game.
+
+## Features
 
 - **Auto word-guessing** — watches the chat/hint state during guessing rounds and submits
   guesses drawn from a bundled word-frequency list, narrowing the candidate list as more
@@ -9,9 +42,8 @@ drawing-and-guessing party game. It plays the game on your behalf:
 - **Auto image drawing** — on your drawing turn, fetches reference images for the current
   word (via a self-hosted SearXNG instance), lets you pick one, converts it to skribbl's
   fixed color palette, and reproduces it on the canvas as pen strokes.
-
-A sidebar panel docked beside the live game shows what the bot is doing and lets you pause,
-resume, or override it (manual guess, manual image pick, cancel a draw in progress).
+- **Live sidebar** — docked beside the game, shows what the bot is doing and lets you pause,
+  resume, or override it (manual guess, manual image pick, cancel a draw in progress).
 
 Built for a small trusted friend group running it locally — not a public release.
 
@@ -61,3 +93,8 @@ npm run build          # type-check and build the sidebar for production
 npm run lint            # run oxlint
 npm run dist:mac        # package a macOS build (also dist:win, dist:linux)
 ```
+
+## Project docs
+
+- [PRODUCT.md](PRODUCT.md) — product purpose, users, and constraints
+- [DESIGN.md](DESIGN.md) — sidebar design system (colors, type, components)
