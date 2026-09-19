@@ -129,6 +129,14 @@ const registerIpcHandlers = (views: {gameView: WebContentsView, sidebar: WebCont
         );
     });
 
+    ipcMainOn("guessWord", (word) => {
+        ipcWebContentsSend(
+            "guessWord",
+            views.gameView.webContents,
+            word
+        );
+    });
+
     ipcMainOn("wordGuesserUpdate", (update) => {
         ipcWebContentsSend(
             "wordGuesserUpdate",

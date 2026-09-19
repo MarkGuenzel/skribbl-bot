@@ -15,6 +15,7 @@ type ImageDrawerUpdate = {
 }
 export type SidebarElectronApi = {
     sendSidebarResize: (size: number) => void
+    guessWord: (word: string) => void
     getImages: (searchQuery: string) => Promise<string[]>
     drawImage: (imageUrl: string) => void
     cancelProcess: (process: SkribblProcess) => void

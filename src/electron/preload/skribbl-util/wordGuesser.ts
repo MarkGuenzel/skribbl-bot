@@ -33,6 +33,15 @@ export default class WordGuesser {
         console.log("Resuming Image Drawer");
     }
 
+    public async guessWordUser(word: string) {
+        await this.wordListMutex.runExclusive(() => {
+            if (word.trim() === "") return;
+
+            this.chatInput.value = word;
+            this.chatInput.form?.requestSubmit();
+        });
+    }
+
     public async update(currentWord: string) {
         // Beginning of guessing round
         if (this.currentWordList.length === 0 && currentWord.includes("_")) {

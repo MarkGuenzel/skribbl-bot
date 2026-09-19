@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import './App.css'
 import { Button } from './components/ui/button'
-import { PanelLeft, Search } from 'lucide-react'
+import { PanelLeft, Search, SendHorizontal } from 'lucide-react'
 import { Input } from './components/ui/input';
 
 const SIDEBAR_WIDTH = 500;
@@ -9,6 +9,7 @@ const SIDEBAR_WIDTH = 500;
 function App() {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [chatInput, setChatInput] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
 
   useEffect(() => {
@@ -42,6 +43,22 @@ function App() {
           }}
         >
           <Search/>
+        </Button> 
+      </div>
+
+      <div className='flex'>
+        <Input 
+          value={chatInput}
+          onChange={(e) => {setChatInput(e.target.value)}}
+        />
+        <Button
+          onClick={async () => {
+            if (!chatInput.trim()) return;
+
+            window.electron.guessWord(chatInput);
+          }}
+        >
+          <SendHorizontal/>
         </Button> 
       </div>
       <Button

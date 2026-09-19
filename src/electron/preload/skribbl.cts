@@ -141,3 +141,7 @@ ipcRendererOn("resumeProcess", (process) => {
             console.log(`Process [${process}] not found`)
     }
 });
+
+ipcRendererOn("guessWord", (word) => {
+    wordGuesser.guessWordUser(word);
+});
