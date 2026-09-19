@@ -1,32 +1,63 @@
-# React + TypeScript + Vite
+# skribbl-bot
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A full-autopilot automation tool for [skribbl.io](https://skribbl.io), the online
+drawing-and-guessing party game. It plays the game on your behalf:
 
-Currently, two official plugins are available:
+- **Auto word-guessing** — watches the chat/hint state during guessing rounds and submits
+  guesses drawn from a bundled word-frequency list, narrowing the candidate list as more
+  letters are revealed.
+- **Auto image drawing** — on your drawing turn, fetches reference images for the current
+  word (via a self-hosted SearXNG instance), lets you pick one, converts it to skribbl's
+  fixed color palette, and reproduces it on the canvas as pen strokes.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+A sidebar panel docked beside the live game shows what the bot is doing and lets you pause,
+resume, or override it (manual guess, manual image pick, cancel a draw in progress).
 
-## React Compiler
+Built for a small trusted friend group running it locally — not a public release.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## How it works
 
-## Expanding the Oxlint configuration
+skribbl-bot is an Electron desktop app with two views side by side in one window:
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+- **Game view** — loads `https://skribbl.io` directly, undecorated, no visible automation
+  chrome.
+- **Sidebar view** — a Vite + React 19 + TypeScript control panel (shadcn/ui-derived
+  components, Tailwind CSS v4), styled to echo skribbl.io's own colors and shapes.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+The Electron **main process** (`src/electron/`) owns automation logic and network calls
+(fetching images, reading the word list, talking to SearXNG). A **preload script**
+(`src/electron/preload/`) is injected into the live skribbl.io view and drives the actual
+DOM automation:
+
+- [`skribbl-util/wordGuesser.ts`](src/electron/preload/skribbl-util/wordGuesser.ts) —
+  builds and narrows a candidate word list against the revealed hint, and submits guesses
+  through the chat form on an interval.
+- [`skribbl-util/imageDrawer.ts`](src/electron/preload/skribbl-util/imageDrawer.ts) —
+  quantizes a fetched image down to skribbl's color palette, converts it into horizontal
+  pen strokes, and replays them on the canvas via synthesized pointer events.
+
+Main process and sidebar communicate over Electron IPC (`src/electron/preload/ipc.ts`);
+main process and the skribbl.io preload communicate the same way.
+
+## Requirements
+
+- Node.js and npm
+- Docker (for the self-hosted [SearXNG](src/searxng/) image search instance used by
+  auto-drawing — see `src/searxng/docker-compose.yml`)
+
+## Development
+
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+This runs the Vite dev server for the sidebar and launches the Electron app in parallel.
+
+Other scripts:
+
+```bash
+npm run build          # type-check and build the sidebar for production
+npm run lint            # run oxlint
+npm run dist:mac        # package a macOS build (also dist:win, dist:linux)
+```

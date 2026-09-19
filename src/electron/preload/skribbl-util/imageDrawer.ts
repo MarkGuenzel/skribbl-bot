@@ -23,6 +23,20 @@ type Stroke = {
 type JimpImage = Awaited<ReturnType<typeof Jimp.read>>;
 type PointerEventType = "pointerdown" | "pointermove" | "pointerup";
 
+/**
+ * Automates drawing a reference image onto the skribbl.io canvas.
+ *
+ * Given an image URL, this fetches the image, quantizes it down to the
+ * game's fixed color palette, collapses same-color runs of pixels into
+ * horizontal strokes, and replays those strokes as synthesized pointer
+ * events on the canvas — the same DOM events a real mouse drag would fire.
+ *
+ * Every run is tagged with a `runId`. Because `draw()` awaits several async
+ * steps (network fetch, image decode, per-stroke animation frames), a call
+ * to `reset()` or a new `draw()` call can happen mid-flight; every await
+ * point re-checks `runId` against the instance's current run and bails out
+ * if it's stale, so only the most recent run is ever allowed to finish.
+ */
 export default class ImageDrawer {
     private canvas: HTMLCanvasElement;
     private colors: GameColor[];
@@ -31,6 +45,12 @@ export default class ImageDrawer {
     private storkesDrawn = 0;
     private runId = 0;
 
+    /**
+     * @param canvas The skribbl.io drawing `<canvas>` element to dispatch pointer events on.
+     * @param colorDivs The palette swatch elements from the skribbl.io color picker; each
+     *   div's `background-color` style is parsed into an RGBA color and paired with the
+     *   div itself so a color can later be "clicked" by dispatching a pointer event on it.
+     */
     constructor(canvas: HTMLCanvasElement, colorDivs: NodeListOf<HTMLDivElement>) {
         this.canvas = canvas;
 
@@ -52,6 +72,15 @@ export default class ImageDrawer {
         this.colors = gameColors;
     }
 
+    /**
+     * Fetches the image at `imageUrl`, converts it to the game's palette, and drives the
+     * canvas through synthesized pointer events to reproduce it stroke by stroke. Progress
+     * is reported throughout via `imageDrawerUpdate` IPC messages (fetching → converting →
+     * drawing → idle). Calling `draw()` again while a previous call is still running
+     * supersedes it — the stale run detects the newer `runId` and stops itself.
+     *
+     * @param imageUrl URL of the source image to reproduce on the canvas.
+     */
     public async draw(imageUrl: string) {
         const runId = ++this.runId;
         clearInterval(this.updaterId);
@@ -130,6 +159,7 @@ export default class ImageDrawer {
         this.sendUpdate({isRunning: this.isRunning, strokesDrawn: strokes.length, stage: "idle"});
     }
 
+    /** Cancels any in-progress or scheduled draw and reports the drawer as idle. */
     public reset() {
         this.runId++;
         clearInterval(this.updaterId);
@@ -147,6 +177,11 @@ export default class ImageDrawer {
         ipcRendererSend("imageDrawerUpdate", {strokesDrawn: this.storkesDrawn});
     }
 
+    /**
+     * Perceptual distance between two colors using the "redmean" approximation of color
+     * difference. Used to find which palette color a given pixel looks closest to — plain
+     * Euclidean RGB distance would misjudge how different colors actually look to the eye.
+     */
     private redmeanDistance(c1: RGBAColor, c2: RGBAColor): number {
         const rmean = (c1.r + c2.r) / 2;
         const dr = c1.r - c2.r;
@@ -159,6 +194,11 @@ export default class ImageDrawer {
         return weightR * dr * dr + weightG * dg * dg + weightB * db * db;
     }
 
+    /**
+     * Quantizes every pixel of `image` to the closest available palette color (by
+     * {@link redmeanDistance}) and returns the result as a flat, row-major array of
+     * indexes into `this.colors`.
+     */
     private convertToColorIds(image: JimpImage): number[] {
         const convertedImage: number[] = [];
 
@@ -184,6 +224,12 @@ export default class ImageDrawer {
         return convertedImage;
     }
 
+    /**
+     * Renders the quantized `colorIds` back into a PNG so the sidebar can preview exactly
+     * what will be drawn (i.e. the image after being snapped to the game's palette).
+     *
+     * @returns A `data:image/png;base64,...` URL ready to use as an `<img>` src.
+     */
     private async buildImagePreview(colorIds: number[], width: number, height: number): Promise<string> {
         const preview = new Jimp({width, height});
         colorIds.forEach((colorId, idx) => {
@@ -199,6 +245,11 @@ export default class ImageDrawer {
         return `data:image/png;base64,${buffer.toString("base64")}`;
     }
 
+    /**
+     * Run-length encodes the quantized pixel grid into horizontal strokes: each run of
+     * consecutive same-color pixels within a row becomes one stroke from its first pixel
+     * to its last, so the pen can drag across a run instead of dabbing every pixel.
+     */
     private createStrokes(image: number[], width: number): Stroke[] {
         let currentColor = image[0];
         let firstPoint: Point = {x: 0, y: 0};
@@ -237,6 +288,11 @@ export default class ImageDrawer {
         return strokes;
     }
 
+    /**
+     * Drops strokes that aren't worth drawing: white strokes (the canvas is already white,
+     * so drawing over it wastes time and clicks) and strokes shorter than
+     * `minStrokeLength`, which read as noise rather than shape at this resolution.
+     */
     private filterStrokes(
         strokes: Stroke[], 
         filterWhite: boolean = true, 
@@ -255,11 +311,13 @@ export default class ImageDrawer {
         });
     }
 
+    /** "Clicks" the given palette color's swatch div to make it the active drawing color. */
     private selectColor(colorId:  number) {
         this.dispatchPointerEventOn(this.colors[colorId].div, "pointerdown", 1);
         this.dispatchPointerEventOn(this.colors[colorId].div, "pointerup", 0);
     }
 
+    /** Drags the pen across the canvas from `stroke.from` to `stroke.to` via pointer events. */
     private async executeStroke(stroke: Stroke) {
         this.dispatchPointerEvent("pointerdown", stroke.from, 1);
         await this.nextFrame();
@@ -267,6 +325,14 @@ export default class ImageDrawer {
         this.dispatchPointerEvent("pointerup", stroke.to, 0);
     }
 
+    /**
+     * Downloads the raw bytes of `imageUrl` over plain `http`/`https`, following redirects
+     * manually (Node's `http.get` doesn't follow them on its own) and rejecting if the
+     * response isn't a successful image response.
+     *
+     * @param redirectsLeft Remaining redirect hops allowed before giving up, to guard
+     *   against redirect loops.
+     */
     private fetchImageBytes(imageUrl: string, redirectsLeft: number = 5): Promise<Buffer> {
         return new Promise((resolve, reject) => {
             const get = imageUrl.startsWith("http:") ? httpGet : httpsGet;
@@ -312,6 +378,7 @@ export default class ImageDrawer {
         });
     }
 
+    /** Resolves on the next animation frame, used to pace pointer events like a real drag. */
     private nextFrame() {
         return new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
     }
