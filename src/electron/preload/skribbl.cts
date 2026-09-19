@@ -23,16 +23,19 @@ const currentWordObserver = new MutationObserver(async () => {
 
     if (description === RoundDescription.WAITING) {
         currentRoundDescription = RoundDescription.WAITING;
+        ipcRendererSend("roundPhase", "WAITING");
         await wordGuesser.reset();
     }
 
     if (description === RoundDescription.GUESS_THIS) {
         currentRoundDescription = RoundDescription.GUESS_THIS;
+        ipcRendererSend("roundPhase", "GUESS THIS");
         await wordGuesser.update(currentWord);
     }
 
     if (description === RoundDescription.DRAW_THIS) {
         currentRoundDescription = RoundDescription.DRAW_THIS;
+        ipcRendererSend("roundPhase", "DRAW THIS");
         currentWord = currentWordDiv?.querySelector<HTMLDivElement>(".word")?.innerHTML || "";
         ipcRendererSend("currentWord", currentWord);
     }

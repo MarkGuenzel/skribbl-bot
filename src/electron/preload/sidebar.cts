@@ -11,5 +11,6 @@ contextBridge.exposeInMainWorld("electron", {
     resumeProcess: (process) => {ipcRendererSend("resumeProcess", process)},
     onWordGuesserUpdate: (callback) => {ipcRendererOn("wordGuesserUpdate", callback)},
     onImageDrawerUpdate: (callback) => {ipcRendererOn("imageDrawerUpdate", callback)},
+    onRoundPhaseUpdate: (callback) => {ipcRendererOn("roundPhase", callback)},
 } satisfies SidebarElectronApi);
 

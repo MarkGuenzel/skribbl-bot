@@ -1,11 +1,13 @@
 type PreloadFile = "sidebar.cjs" | "skribbl.cjs";
 type SkribblProcess = "imageDrawer" | "wordGuesser";
+type RoundPhase = "WAITING" | "GUESS THIS" | "DRAW THIS";
 
 type EventPayloadMapping = {
     sidebarResize: { args: [size: number], return: void}
     guessWord: {args: [word: string], return: void}
     getWordList: {args: [wordLength: number], return: string[]}
     currentWord:{args: [currentWod: string], return: void}
+    roundPhase: {args: [phase: RoundPhase], return: void}
     getImages: {args: [searchQuery: string], return: string[]}
     drawImage: {args: [imageUrl: string], return: void}
     cancelProcess: {args: [process: SkribblProcess], return: void}

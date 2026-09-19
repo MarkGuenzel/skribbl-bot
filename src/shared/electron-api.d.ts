@@ -1,4 +1,5 @@
 type SkribblProcess = "imageDrawer" | "wordGuesser";
+export type RoundPhase = "WAITING" | "GUESS THIS" | "DRAW THIS";
 type UnsubscribeFunction = () => void;
 
 type WordGuesserUpdate = {
@@ -22,4 +23,5 @@ export type SidebarElectronApi = {
     resumeProcess: (process: SkribblProcess) => void
     onWordGuesserUpdate: (callback: (update: WordGuesserUpdate) => void) => void
     onImageDrawerUpdate:  (callback: (update: ImageDrawerUpdate) => void) => void
+    onRoundPhaseUpdate: (callback: (phase: RoundPhase) => void) => void
 }

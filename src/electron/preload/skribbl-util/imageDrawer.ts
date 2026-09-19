@@ -100,13 +100,14 @@ export default class ImageDrawer {
         this.isRunning = false;
         this.storkesDrawn = 0;
         console.log("Stopping Image Drawer");
+        this.sendUpdate({isRunning: false, strokesDrawn: 0});
     }
 
     private sendUpdate(update: ImageDrawerUpdate) {
         ipcRendererSend("imageDrawerUpdate", update);
     }
 
-    private sendDrawUpdate() {
+    private sendDrawUpdate = () => {
         ipcRendererSend("imageDrawerUpdate", {strokesDrawn: this.storkesDrawn});
     }
 

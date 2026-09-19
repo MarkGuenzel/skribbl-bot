@@ -153,6 +153,14 @@ const registerIpcHandlers = (views: {gameView: WebContentsView, sidebar: WebCont
         );
     });
 
+    ipcMainOn("roundPhase", (phase) => {
+        ipcWebContentsSend(
+            "roundPhase",
+            views.sidebar.webContents,
+            phase
+        );
+    });
+
     ipcMainOn("currentWord", async (currentWord) => {
         if (currentWord === "") {
             console.log(`Received empty word to draw from skribbl`);
