@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld("electron", {
     drawImage: (imageUrl) => {ipcRendererSend("drawImage", imageUrl)},
     cancelProcess: (process) => {ipcRendererSend("cancelProcess", process)},
     resumeProcess: (process) => {ipcRendererSend("resumeProcess", process)},
-    onImageUrls: (callback) => {ipcRendererOn("imageUrls", callback)}
+    onWordGuesserUpdate: (callback) => {ipcRendererOn("wordGuesserUpdate", callback)},
+    onImageDrawerUpdate: (callback) => {ipcRendererOn("imageDrawerUpdate", callback)},
 } satisfies SidebarElectronApi);
 

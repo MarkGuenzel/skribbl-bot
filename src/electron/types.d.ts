@@ -6,13 +6,27 @@ type EventPayloadMapping = {
     getWordList: {args: [wordLength: number], return: string[]}
     currentWord:{args: [currentWod: string], return: void}
     getImages: {args: [searchQuery: string], return: string[]}
-    imageUrls: {args: [imageUrls: string[]], return: void}
     drawImage: {args: [imageUrl: string], return: void}
     cancelProcess: {args: [process: SkribblProcess], return: void}
     resumeProcess: {args: [process: SkribblProcess], return: void}
+    wordGuesserUpdate: {args: [update: WordGuesserUpdate], return: void}
+    imageDrawerUpdate: {args: [update: ImageDrawerUpdate], return: void}
 }
 
 type UnsubscribeFunction = () => void;
+
+type WordGuesserUpdate = {
+    isRunning?: boolean
+    currentWordList?: string[]
+}
+
+type ImageDrawerUpdate = {
+    isRunning?: boolean
+    imageUrls?: string[]
+    imageToDraw?: string
+    totalAmountStrokes?: number
+    strokesDrawn?: number
+}
 
 interface SearchResult {
     template: string;

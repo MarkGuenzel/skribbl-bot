@@ -105,21 +105,6 @@ const registerIpcHandlers = (views: {gameView: WebContentsView, sidebar: WebCont
         return await getImages(searchQuery);    
     });
 
-    ipcMainOn("currentWord", async (currentWord) => {
-        if (currentWord === "") {
-            console.log(`Received empty word to draw from skribbl`);
-            return;
-        }
-        
-        console.log(`Received current word from skribbl: ${currentWord}`);
-        const imageUrls = await getImages(currentWord + " piktogramm");
-        ipcWebContentsSend(
-            "imageUrls",
-            views.sidebar.webContents,
-            imageUrls
-        )
-    });
-
     ipcMainOn("drawImage", (imageUrl) => {
         ipcWebContentsSend(
             "drawImage",
@@ -142,6 +127,37 @@ const registerIpcHandlers = (views: {gameView: WebContentsView, sidebar: WebCont
             views.gameView.webContents,
             proccess
         );
+    });
+
+    ipcMainOn("wordGuesserUpdate", (update) => {
+        ipcWebContentsSend(
+            "wordGuesserUpdate",
+            views.sidebar.webContents,
+            update
+        )
+    });
+
+    ipcMainOn("imageDrawerUpdate", (update) => {
+        ipcWebContentsSend(
+            "imageDrawerUpdate",
+            views.sidebar.webContents,
+            update
+        );
+    });
+
+    ipcMainOn("currentWord", async (currentWord) => {
+        if (currentWord === "") {
+            console.log(`Received empty word to draw from skribbl`);
+            return;
+        }
+        
+        console.log(`Received current word from skribbl: ${currentWord}`);
+        const imageUrls = await getImages(currentWord + " piktogramm");
+        ipcWebContentsSend(
+            "imageDrawerUpdate",
+            views.sidebar.webContents,
+            {imageUrls: imageUrls}
+        )
     });
 }
 

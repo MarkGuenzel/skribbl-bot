@@ -1,10 +1,24 @@
 type SkribblProcess = "imageDrawer" | "wordGuesser";
+type UnsubscribeFunction = () => void;
 
+type WordGuesserUpdate = {
+    isRunning?: boolean
+    currentWordList?: string[]
+}
+
+type ImageDrawerUpdate = {
+    isRunning?: boolean
+    imageUrls?: string[]
+    imageToDraw?: string
+    totalAmountStrokes?: number
+    strokesDrawn?: number
+}
 export type SidebarElectronApi = {
     sendSidebarResize: (size: number) => void
     getImages: (searchQuery: string) => Promise<string[]>
     drawImage: (imageUrl: string) => void
     cancelProcess: (process: SkribblProcess) => void
     resumeProcess: (process: SkribblProcess) => void
-    onImageUrls:  (callback: (imageUrls: string[]) => void) => void
+    onWordGuesserUpdate: (callback: (update: WordGuesserUpdate) => void) => void
+    onImageDrawerUpdate:  (callback: (update: ImageDrawerUpdate) => void) => void
 }

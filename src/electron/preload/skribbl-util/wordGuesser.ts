@@ -1,5 +1,5 @@
 import { Mutex } from "async-mutex";
-import { ipcRendererInvoke } from "../ipc.js";
+import { ipcRendererInvoke, ipcRendererSend } from "../ipc.js";
 
 export default class WordGuesser {
     private readonly chatInput: HTMLInputElement;
@@ -18,16 +18,18 @@ export default class WordGuesser {
         await this.wordListMutex.runExclusive(() => {
             this.currentWordList.splice(0);
         });
-        this.isRunning = false;
+        this.stop();
     }
 
     public stop() {
         this.isRunning = false;
+        this.sendUpdate({isRunning: this.isRunning});
         console.log("Pausing Word Guesser");
     }
 
     public resume() {
         this.isRunning = true;
+        this.sendUpdate({isRunning: this.isRunning});
         console.log("Resuming Image Drawer");
     }
 
@@ -41,6 +43,7 @@ export default class WordGuesser {
             console.log("Spawning Word Guesser");
             this.isRunning = true;
             this.wordGuesserId = setInterval(this.guessWord, 2_000);
+            this.sendUpdate({isRunning: this.isRunning, currentWordList: this.currentWordList});
             return;
         }
 
@@ -64,7 +67,12 @@ export default class WordGuesser {
                 this.currentWordList.splice(0);
                 this.currentWordList.push(...newItems);
             }
+            this.sendUpdate({currentWordList: this.currentWordList})
         });
+    }
+
+    private sendUpdate(update: WordGuesserUpdate) {
+        ipcRendererSend("wordGuesserUpdate", update);
     }
 
     private guessWord = async () => {

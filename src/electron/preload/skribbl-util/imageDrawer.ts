@@ -1,8 +1,8 @@
-import { resolve } from "path";
 import { Jimp, ResizeStrategy, RGBAColor } from "jimp";
-import { colorDiff, intToRGBA } from "@jimp/utils";
+import { intToRGBA, rgbaToInt } from "@jimp/utils";
 import { get as httpGet } from "node:http";
 import { get as httpsGet } from "node:https";
+import { ipcRendererSend } from "../ipc.js";
 
 type Point = {
     x: number,
@@ -27,6 +27,8 @@ export default class ImageDrawer {
     private canvas: HTMLCanvasElement;
     private colors: GameColor[];
     private isRunning = false;
+    private updaterId!: NodeJS.Timeout;
+    private storkesDrawn = 0;
 
     constructor(canvas: HTMLCanvasElement, colorDivs: NodeListOf<HTMLDivElement>) {
         this.canvas = canvas;
@@ -41,7 +43,7 @@ export default class ImageDrawer {
 
                 gameColors.push({
                     div: colorDiv,
-                    color: {r: Number(r), g: Number(g), b: Number(b), a: 0}
+                    color: {r: Number(r), g: Number(g), b: Number(b), a: 255}
                 })
             }
 
@@ -60,13 +62,19 @@ export default class ImageDrawer {
         });
 
         const colorIds = this.convertToColorIds(image);
+        const imagePreview = await this.buildImagePreview(colorIds, image.width, image.height);
+        this.sendUpdate({imageToDraw: imagePreview});
+
         let strokes = this.createStrokes(colorIds, image.width);
         console.log(`Amount of strokes: ${strokes.length}`);
         strokes = this.filterStrokes(strokes);
-        console.log(`Amount of strokes after filter: ${strokes.length}`);
         strokes.sort((a, b) => (a.colorId - b.colorId));
+        console.log(`Amount of strokes after filter: ${strokes.length}`);
 
         this.isRunning = true;
+        this.sendUpdate({isRunning: this.isRunning, totalAmountStrokes: strokes.length})
+        setInterval(this.sendDrawUpdate, 2_000);
+        
         let lastColorId = null;
         for (const stroke of strokes) {
             if (!this.isRunning) break;
@@ -79,14 +87,27 @@ export default class ImageDrawer {
             }
 
             await this.executeStroke(stroke);
+            this.storkesDrawn++;
         }
 
         console.log("Finished drawing the image");
+        this.reset();
+        this.sendUpdate({isRunning: this.isRunning, strokesDrawn: strokes.length});
     }
 
-    public cancel() {
+    public reset() {
+        clearInterval(this.updaterId);
         this.isRunning = false;
+        this.storkesDrawn = 0;
         console.log("Stopping Image Drawer");
+    }
+
+    private sendUpdate(update: ImageDrawerUpdate) {
+        ipcRendererSend("imageDrawerUpdate", update);
+    }
+
+    private sendDrawUpdate() {
+        ipcRendererSend("imageDrawerUpdate", {strokesDrawn: this.storkesDrawn});
     }
 
     private redmeanDistance(c1: RGBAColor, c2: RGBAColor): number {
@@ -124,6 +145,21 @@ export default class ImageDrawer {
         }
 
         return convertedImage;
+    }
+
+    private async buildImagePreview(colorIds: number[], width: number, height: number): Promise<string> {
+        const preview = new Jimp({width, height});
+        colorIds.forEach((colorId, idx) => {
+            const skribblColor = this.colors[colorId].color;
+            preview.setPixelColor(
+                rgbaToInt(skribblColor.r, skribblColor.g, skribblColor.b, skribblColor.a),
+                idx % width,
+                Math.floor(idx / width)
+            )
+        });
+
+        const buffer =  await preview.getBuffer("image/png");
+        return `data:image/png;base64,${buffer.toString("base64")}`;
     }
 
     private createStrokes(image: number[], width: number): Stroke[] {

@@ -123,7 +123,7 @@ ipcRendererOn("cancelProcess", (process) => {
             wordGuesser.stop();
             break;
         case "imageDrawer":
-            imageDrawer.cancel();
+            imageDrawer.reset();
             break;
         default:
             console.log(`Process [${process}] not found`)
