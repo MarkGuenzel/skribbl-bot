@@ -7,8 +7,12 @@ type WordGuesserUpdate = {
     currentWordList?: string[]
 }
 
+export type DrawerStage = "idle" | "fetching" | "converting" | "drawing";
+
 type ImageDrawerUpdate = {
     isRunning?: boolean
+    stage?: DrawerStage
+    error?: string
     imageUrls?: string[]
     imageToDraw?: string
     totalAmountStrokes?: number

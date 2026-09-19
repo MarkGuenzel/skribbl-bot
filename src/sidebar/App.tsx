@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import './App.css'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
-import { PanelLeft, Search, SendHorizontal, Play, Pause, Loader2 } from 'lucide-react'
+import { PanelLeft, Search, SendHorizontal, Play, Pause, Loader2, ImageOff } from 'lucide-react'
 import { cn } from './lib/utils'
-import type { RoundPhase } from '../shared/electron-api'
+import type { RoundPhase, DrawerStage } from '../shared/electron-api'
 
 const OPEN_WIDTH = 400;
 const COLLAPSED_WIDTH = 40;
@@ -17,6 +17,8 @@ type WordGuesserState = {
 
 type ImageDrawerState = {
   isRunning: boolean
+  stage: DrawerStage
+  error?: string
   imageToDraw?: string
   totalAmountStrokes: number
   strokesDrawn: number
@@ -37,6 +39,7 @@ function App() {
   });
   const [imageDrawer, setImageDrawer] = useState<ImageDrawerState>({
     isRunning: false,
+    stage: "idle",
     totalAmountStrokes: 0,
     strokesDrawn: 0,
   });
@@ -62,7 +65,12 @@ function App() {
       // so a stale image doesn't flash before the new one is picked.
       if (phase === "DRAW THIS" && previousPhase.current !== "DRAW THIS") {
         setSelectedUrl(null);
-        setImageDrawer((prev) => ({ ...prev, imageToDraw: undefined }));
+        setImageDrawer((prev) => ({ ...prev, imageToDraw: undefined, error: undefined, stage: "idle" }));
+      }
+      // Leaving the drawing phase: cancel any in-flight fetch/convert on the backend too,
+      // not just the displayed state, so a stale result can't resolve into a later round.
+      if (previousPhase.current === "DRAW THIS" && phase !== "DRAW THIS") {
+        window.electron.cancelProcess("imageDrawer");
       }
       previousPhase.current = phase;
       setRoundPhase(phase);
@@ -263,20 +271,40 @@ function DrawingPanel({
   searchLoading: boolean
   searchError: string | null
 }) {
+  const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
+  const busy = imageDrawer.stage === "fetching" || imageDrawer.stage === "converting" || imageDrawer.isRunning;
+  const detail = (() => {
+    switch (imageDrawer.stage) {
+      case "fetching":
+        return "fetching image…";
+      case "converting":
+        return "converting image…";
+      case "drawing":
+        return imageDrawer.totalAmountStrokes > 0
+          ? `${imageDrawer.strokesDrawn}/${imageDrawer.totalAmountStrokes} strokes`
+          : "drawing…";
+      case "idle":
+      default:
+        return imageDrawer.error ? "failed" : "idle";
+    }
+  })();
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
       <StatusRow
         label="Image Drawer"
-        isRunning={imageDrawer.isRunning}
-        detail={
-          imageDrawer.isRunning
-            ? imageDrawer.totalAmountStrokes > 0
-              ? `${imageDrawer.strokesDrawn}/${imageDrawer.totalAmountStrokes} strokes`
-              : "drawing…"
-            : "idle"
-        }
+        isRunning={busy}
+        hasError={!!imageDrawer.error}
+        canPause={imageDrawer.isRunning}
+        detail={detail}
         onPause={onCancel}
       />
+
+      {imageDrawer.error && (
+        <p role="alert" className="text-xs text-stop-active">
+          {imageDrawer.error}
+        </p>
+      )}
 
       {imageDrawer.isRunning && imageDrawer.totalAmountStrokes > 0 && (
         <div
@@ -337,20 +365,38 @@ function DrawingPanel({
             No reference images yet. They appear here automatically on your turn, or search for your own.
           </p>
         )}
-        {imageUrls.map((url) => (
-          <button
-            key={url}
-            type="button"
-            onClick={() => onSelectImage(url)}
-            aria-pressed={selectedUrl === url}
-            className={cn(
-              "overflow-hidden rounded-md border-2 border-border transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-              selectedUrl === url && "border-select"
-            )}
-          >
-            <img src={url} alt="Search result" className="h-16 w-full object-cover" />
-          </button>
-        ))}
+        {imageUrls.map((url) => {
+          const failed = failedUrls.has(url);
+          return (
+            <button
+              key={url}
+              type="button"
+              onClick={() => !failed && onSelectImage(url)}
+              disabled={failed}
+              aria-pressed={selectedUrl === url}
+              aria-label={failed ? "Image failed to load" : "Search result"}
+              className={cn(
+                "overflow-hidden rounded-md border-2 border-border transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                selectedUrl === url && "border-select",
+                failed && "cursor-not-allowed opacity-60"
+              )}
+            >
+              {failed ? (
+                <div className="flex h-16 w-full flex-col items-center justify-center gap-0.5 bg-muted text-muted-foreground">
+                  <ImageOff className="size-4" />
+                  <span className="text-[0.6rem]">failed to load</span>
+                </div>
+              ) : (
+                <img
+                  src={url}
+                  alt="Search result"
+                  className="h-16 w-full object-cover"
+                  onError={() => setFailedUrls((prev) => new Set(prev).add(url))}
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -359,12 +405,16 @@ function DrawingPanel({
 function StatusRow({
   label,
   isRunning,
+  hasError = false,
+  canPause = isRunning,
   detail,
   onPause,
   onResume,
 }: {
   label: string
   isRunning: boolean
+  hasError?: boolean
+  canPause?: boolean
   detail: string
   onPause: () => void
   onResume?: () => void
@@ -375,7 +425,7 @@ function StatusRow({
         <span
           className={cn(
             "size-2 shrink-0 rounded-full",
-            isRunning ? "bg-go status-dot--running" : "bg-muted-foreground/40"
+            hasError ? "bg-stop" : isRunning ? "bg-go status-dot--running" : "bg-muted-foreground/40"
           )}
           aria-hidden
         />
@@ -385,7 +435,7 @@ function StatusRow({
         </div>
       </div>
       <div className="flex shrink-0 gap-1">
-        {isRunning ? (
+        {canPause ? (
           <Button
             size="icon-sm"
             className="bg-stop text-stop-foreground hover:bg-stop-active"

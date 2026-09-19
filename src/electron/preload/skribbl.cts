@@ -117,7 +117,9 @@ ipcRendererOn("drawImage", (imageUrl) => {
         return;
     }
     
-    imageDrawer.draw(imageUrl);
+    imageDrawer.draw(imageUrl).catch((error) => {
+        console.error("Unexpected error while drawing: ", error);
+    });
 });
 
 ipcRendererOn("cancelProcess", (process) => {

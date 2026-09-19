@@ -29,6 +29,7 @@ export default class ImageDrawer {
     private isRunning = false;
     private updaterId!: NodeJS.Timeout;
     private storkesDrawn = 0;
+    private runId = 0;
 
     constructor(canvas: HTMLCanvasElement, colorDivs: NodeListOf<HTMLDivElement>) {
         this.canvas = canvas;
@@ -52,17 +53,49 @@ export default class ImageDrawer {
     }
 
     public async draw(imageUrl: string) {
-        const imageBuffer = await this.fetchImageBytes(imageUrl);
-        const image = await Jimp.read(imageBuffer);
+        const runId = ++this.runId;
+        clearInterval(this.updaterId);
+        this.storkesDrawn = 0;
+        this.sendUpdate({stage: "fetching", error: undefined});
+
+        let imageBuffer: Buffer;
+        try {
+            imageBuffer = await this.fetchImageBytes(imageUrl);
+        }
+        catch (error) {
+            console.error("Failed to fetch image for drawing: ", error);
+            if (runId === this.runId) {
+                this.sendUpdate({stage: "idle", error: "Couldn't download that image. Try a different one."});
+            }
+            return;
+        }
+        if (runId !== this.runId) return;
+
+        this.sendUpdate({stage: "converting"});
+
+        let image: JimpImage;
+        try {
+            image = await Jimp.read(imageBuffer);
+        }
+        catch (error) {
+            console.error("Failed to decode the fetched image: ", error);
+            if (runId === this.runId) {
+                this.sendUpdate({stage: "idle", error: "That didn't look like a valid image. Try a different one."});
+            }
+            return;
+        }
+        if (runId !== this.runId) return;
+
         console.log(`Original Image: W: ${image.width}, H: ${image.height}`);
         image.resize({
-            w: this.canvas.width, 
+            w: this.canvas.width,
             h: this.canvas.height,
             mode: ResizeStrategy.NEAREST_NEIGHBOR
         });
 
         const colorIds = this.convertToColorIds(image);
         const imagePreview = await this.buildImagePreview(colorIds, image.width, image.height);
+        if (runId !== this.runId) return;
         this.sendUpdate({imageToDraw: imagePreview});
 
         let strokes = this.createStrokes(colorIds, image.width);
@@ -70,14 +103,15 @@ export default class ImageDrawer {
         strokes = this.filterStrokes(strokes);
         strokes.sort((a, b) => (a.colorId - b.colorId));
         console.log(`Amount of strokes after filter: ${strokes.length}`);
+        if (runId !== this.runId) return;
 
         this.isRunning = true;
-        this.sendUpdate({isRunning: this.isRunning, totalAmountStrokes: strokes.length})
-        setInterval(this.sendDrawUpdate, 2_000);
-        
+        this.sendUpdate({isRunning: this.isRunning, stage: "drawing", totalAmountStrokes: strokes.length})
+        this.updaterId = setInterval(this.sendDrawUpdate, 2_000);
+
         let lastColorId = null;
         for (const stroke of strokes) {
-            if (!this.isRunning) break;
+            if (!this.isRunning || runId !== this.runId) break;
 
             const currentColorId = stroke.colorId;
             if (lastColorId === null || lastColorId !== currentColorId) {
@@ -90,17 +124,19 @@ export default class ImageDrawer {
             this.storkesDrawn++;
         }
 
+        if (runId !== this.runId) return;
         console.log("Finished drawing the image");
         this.reset();
-        this.sendUpdate({isRunning: this.isRunning, strokesDrawn: strokes.length});
+        this.sendUpdate({isRunning: this.isRunning, strokesDrawn: strokes.length, stage: "idle"});
     }
 
     public reset() {
+        this.runId++;
         clearInterval(this.updaterId);
         this.isRunning = false;
         this.storkesDrawn = 0;
         console.log("Stopping Image Drawer");
-        this.sendUpdate({isRunning: false, strokesDrawn: 0});
+        this.sendUpdate({isRunning: false, strokesDrawn: 0, stage: "idle"});
     }
 
     private sendUpdate(update: ImageDrawerUpdate) {
