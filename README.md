@@ -94,7 +94,8 @@ npm run lint            # run oxlint
 npm run dist:mac        # package a macOS build (also dist:win, dist:linux)
 ```
 
-## Project docs
+## TODOS
 
-- [PRODUCT.md](PRODUCT.md) — product purpose, users, and constraints
-- [DESIGN.md](DESIGN.md) — sidebar design system (colors, type, components)
+[ ] expand local word list, if it is a new word
+[ ] add url searchbar so users can join an invite
+[ ] optimize drawing speed by utilizing different brush sizes / merging strokes
