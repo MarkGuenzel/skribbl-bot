@@ -3,6 +3,8 @@ import path from "path"
 import { getPreloadPath, ipcMainHandle, ipcMainOn, ipcWebContentsSend } from "./utils.js";
 import { parse } from "csv-parse/sync";
 import { readFileSync, writeFileSync } from "fs";
+import { ElectronBlocker } from "@ghostery/adblocker-electron";
+import fetch from "cross-fetch";
 
 type CSVRow = {
     word: string,
@@ -10,7 +12,10 @@ type CSVRow = {
 }
 const csvPath = "src/electron/skribbl-words.csv"
 const SEARCH_URL = "http://localhost:8080/search"
-
+const adBlocker = await ElectronBlocker.fromLists(fetch, [
+    "https://easylist.to/easylist/easylist.txt",
+    "https://easylist.to/easylist/easyprivacy.txt",
+]);
 
 const loadWebContents = (mainWindow: BaseWindow) => {
     // Skribbl
@@ -22,7 +27,9 @@ const loadWebContents = (mainWindow: BaseWindow) => {
     });
     mainWindow.contentView.addChildView(gameView);
     gameView.webContents.loadURL("https://skribbl.io");
-    gameView.webContents.openDevTools({ mode: "bottom" })
+    // gameView.webContents.openDevTools({ mode: "bottom" });
+
+    adBlocker.enableBlockingInSession(gameView.webContents.session);
     
     // Sidebar
     const sidebar = new WebContentsView({
@@ -33,7 +40,7 @@ const loadWebContents = (mainWindow: BaseWindow) => {
     })
     mainWindow.contentView.addChildView(sidebar);
     sidebar.webContents.loadURL("http://localhost:5123");
-    sidebar.webContents.openDevTools({ mode: "bottom" })
+    // sidebar.webContents.openDevTools({ mode: "bottom" });
 
     let sidebarWidth = 40;
     const layout = () => {

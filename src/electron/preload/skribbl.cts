@@ -24,6 +24,7 @@ const currentWordObserver = new MutationObserver(async () => {
     if (description === RoundDescription.WAITING) {
         currentRoundDescription = RoundDescription.WAITING;
         ipcRendererSend("roundPhase", "WAITING");
+        imageDrawer.reset();
         await wordGuesser.reset();
     }
 

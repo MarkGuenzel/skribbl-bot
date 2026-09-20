@@ -129,7 +129,7 @@ export default class ImageDrawer {
 
         let strokes = this.createStrokes(colorIds, image.width);
         console.log(`Amount of strokes: ${strokes.length}`);
-        strokes = this.filterStrokes(strokes);
+        strokes = this.filterStrokes(strokes, true, 2);
         strokes.sort((a, b) => (a.colorId - b.colorId));
         console.log(`Amount of strokes after filter: ${strokes.length}`);
         if (runId !== this.runId) return;

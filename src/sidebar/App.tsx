@@ -8,7 +8,7 @@ import type { RoundPhase, DrawerStage } from '../shared/electron-api'
 
 const OPEN_WIDTH = 400;
 const COLLAPSED_WIDTH = 40;
-const MAX_CANDIDATES_SHOWN = 60;
+const MAX_CANDIDATES_SHOWN = 150;
 
 type WordGuesserState = {
   isRunning: boolean
@@ -328,7 +328,7 @@ function DrawingPanel({
             <img
               src={imageDrawer.imageToDraw}
               alt="Palette-converted preview of what's being drawn"
-              className="max-h-32 w-full object-contain bg-muted"
+              className="max-h-48 w-full object-contain bg-muted"
             />
           </div>
         </div>
