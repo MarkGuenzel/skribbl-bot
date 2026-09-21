@@ -1,38 +1,17 @@
 # skribbl-bot
 
-A full-autopilot bot for [skribbl.io](https://skribbl.io), the online drawing-and-guessing
-party game. It plays both halves of the game loop end-to-end: guessing the secret word from
-chat/hint state, and drawing a fetched reference image onto the canvas when it's your turn —
-while a live sidebar shows what it's doing and lets you step in at any point.
+skribbl-bot is a desktop app that automates [skribbl.io](https://skribbl.io), the online
+drawing-and-guessing party game. It runs alongside the live game and plays both halves of
+the game loop: guessing the secret word from chat/hint state, and drawing a fetched
+reference image onto the canvas when it's your turn. A sidebar docked next to the game shows
+what it's doing and lets you pause, resume, or override it.
+
+## Demo
 
 <p float="left">
-  <img src="docs/images/word-guesser.png" width="260" alt="Sidebar mid-guessing round, showing the narrowed list of candidate words" />
-  <img src="docs/images/image-drawer.png" width="260" alt="Sidebar mid-draw, showing stroke progress and the reference image picker" />
+  <img src="docs/images/word-guesser.gif" width="420" alt="Word Guesser sidebar narrowing candidates and submitting guesses as hints are revealed" />
+  <img src="docs/images/image-drawer.gif" width="420" alt="Image Drawer sidebar picking a reference image and drawing it onto the skribbl.io canvas" />
 </p>
-
-<!--
-  TODO(showcase): these two are real sidebar-only captures from a UI review pass. The more
-  impressive shots — a before/after of a source photo next to what the bot actually drew on
-  the skribbl.io canvas, and a screen recording of a draw in progress — need to come from an
-  actual play session. Drop them in docs/images/ and link them here when you have them.
--->
-
-## Why it's interesting
-
-- **Perceptual color quantization** — reference images are matched to skribbl's ~20-color
-  palette using "redmean" color distance rather than naive RGB distance, so the mapped
-  colors look closer to the source than they would with plain Euclidean matching.
-- **Pixels to pen strokes** — the quantized image is run-length encoded into horizontal
-  strokes, then replayed on the canvas as synthesized pointer events timed like a real drag,
-  rather than dabbing pixel by pixel.
-- **Cancellation-safe automation** — both the guesser and the drawer run long async
-  pipelines (network fetch, image decode, hundreds of timed strokes) against a game that can
-  change state at any moment (round ends, user picks a new image). Each run is tagged and
-  every await point checks whether it's been superseded, and shared state is mutex-guarded,
-  so restarting mid-flight never races itself.
-- **Two-view Electron architecture** — the live skribbl.io page and the control panel are
-  separate `WebContentsView`s in one window, coordinated over IPC, with a preload script
-  doing DOM automation directly against the unmodified game.
 
 ## Features
 
@@ -71,22 +50,38 @@ DOM automation:
 Main process and sidebar communicate over Electron IPC (`src/electron/preload/ipc.ts`);
 main process and the skribbl.io preload communicate the same way.
 
-## Requirements
+## Running it
+
+### Requirements
 
 - Node.js and npm
-- Docker (for the self-hosted [SearXNG](src/searxng/) image search instance used by
-  auto-drawing — see `src/searxng/docker-compose.yml`)
+- Docker, for the self-hosted [SearXNG](src/searxng/) instance auto-drawing uses for image
+  search
 
-## Development
+### 1. Start SearXNG
+
+Auto image drawing searches for reference images through a local SearXNG instance rather
+than a third-party API, so it needs to be running first:
+
+```bash
+cp src/searxng/.env.example src/searxng/.env   # first time only
+./start-searxng.sh
+```
+
+This starts SearXNG on `http://localhost:8080`. Leave it running in the background — it's
+a one-time setup, not something you restart per session.
+
+### 2. Run the app
 
 ```bash
 npm install
 npm run dev
 ```
 
-This runs the Vite dev server for the sidebar and launches the Electron app in parallel.
+This runs the Vite dev server for the sidebar and launches the Electron app in parallel. Two
+views open in one window: the live skribbl.io game, and the sidebar control panel next to it.
 
-Other scripts:
+### Other scripts
 
 ```bash
 npm run build          # type-check and build the sidebar for production
@@ -94,8 +89,8 @@ npm run lint            # run oxlint
 npm run dist:mac        # package a macOS build (also dist:win, dist:linux)
 ```
 
-## TODOS
+## TODO
 
-[ ] expand local word list, if it is a new word
-[ ] add url searchbar so users can join an invite
-[ ] optimize drawing speed by utilizing different brush sizes / merging strokes
+- [ ] Expand the local word list when a new word comes up
+- [ ] Add a URL search bar so users can join a room by invite link
+- [ ] Optimize drawing speed with different brush sizes / merged strokes
